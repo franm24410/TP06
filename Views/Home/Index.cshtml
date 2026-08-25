@@ -1,0 +1,150 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Mi primer juego</title>
+
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        canvas {
+            background-color: black;
+        }
+    </style>
+</head>
+
+<body>
+
+    <canvas id="game" width="1913" height="950"></canvas>
+
+    <script>
+
+
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+
+
+   
+
+        let playerX = 100;
+        let playerY = 100;
+
+        let playerWidth = 50;
+        let playerHeight = 50;
+
+        let speed = 25;
+
+
+
+
+        let keys = {};
+
+        document.addEventListener("keydown", function(event) {
+            keys[event.key.toLowerCase()] = true;
+        });
+
+        document.addEventListener("keyup", function(event) {
+            keys[event.key.toLowerCase()] = false;
+        });
+
+
+
+
+        function update() {
+
+            // Movimiento
+            if (keys["w"]) {
+                playerY -= speed;
+            }
+
+            if (keys["s"]) {
+                playerY += speed;
+            }
+
+            if (keys["a"]) {
+                playerX -= speed;
+            }
+
+            if (keys["d"]) {
+                playerX += speed;
+            }
+
+
+
+
+            // Izquierda
+            if (playerX < 0) {
+                playerX = 0;
+            }
+
+            // Derecha
+            if (playerX + playerWidth > canvas.width) {
+                playerX = canvas.width - playerWidth;
+            }
+
+            // Arriba
+            if (playerY < 0) {
+                playerY = 0;
+            }
+
+            // Abajo
+            if (playerY + playerHeight > canvas.height) {
+                playerY = canvas.height - playerHeight;
+            }
+        }
+
+
+
+        function draw() {
+
+            // Limpiar el Canvas
+            ctx.clearRect(
+                0,
+                0,
+                canvas.width,
+                canvas.height
+            );
+
+
+            // Dibujar jugador
+            ctx.fillStyle = "red";
+
+            ctx.fillRect(
+                playerX,
+                playerY,
+                playerWidth,
+                playerHeight
+            );
+        }
+
+
+
+        function gameLoop() {
+
+            update();
+
+            draw();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+
+
+
+        gameLoop();
+
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        resizeCanvas();
+
+        window.addEventListener("resize", resizeCanvas);
+    </script>
+
+</body>
+</html>
