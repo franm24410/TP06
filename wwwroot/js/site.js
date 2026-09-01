@@ -6,8 +6,8 @@ const ctx = canvas.getContext("2d");
 let player = {
     x: 1550,
     y: 740,
-    width: 20,
-    height: 20
+    width: 30,
+    height: 30
 };
 
 let camera = { x: 0, y: 0 };

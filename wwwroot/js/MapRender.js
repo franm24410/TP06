@@ -194,28 +194,15 @@ function getRoomPartsByName(name) {
 }
 
 // ---------------------------------------------------------------------
-// 3c. COLISIÓN DE PAREDES — cualquier tile no vacío en "Paredes" bloquea
+// 3c. COLISIÓN DE PAREDES — bloquea el paso con los rectángulos de la
+// capa de objetos "Interactuable"
 // ---------------------------------------------------------------------
-const wallTileSet = new Set(); // guarda "col,row" de cada tile de pared
+const wallsLayer = mapData.layers.find(l => l.name === "Interactuable");
+const wallObjects = wallsLayer ? wallsLayer.objects : [];
 
-function buildWallTileSet() {
-  const tiles = decodedLayers["Paredes"];
-  if (!tiles) return;
-  for (const t of tiles) wallTileSet.add(t.tileX + "," + t.tileY);
-}
-
-// ¿Un rectángulo (en px, coords de mundo) toca algún tile de pared?
+// ¿Un rectángulo (en px, coords de mundo) toca algún objeto de "Interactuable"?
 function rectHitsWall(rect) {
-  const startCol = Math.floor(rect.x / TILE_W);
-  const endCol = Math.floor((rect.x + rect.width - 1) / TILE_W);
-  const startRow = Math.floor(rect.y / TILE_H);
-  const endRow = Math.floor((rect.y + rect.height - 1) / TILE_H);
-  for (let col = startCol; col <= endCol; col++) {
-    for (let row = startRow; row <= endRow; row++) {
-      if (wallTileSet.has(col + "," + row)) return true;
-    }
-  }
-  return false;
+  return wallObjects.some(obj => rectsOverlap(rect, obj));
 }
 
 // Mueve al jugador dx,dy respetando paredes. Se mueve eje por eje para
@@ -344,7 +331,6 @@ function drawScene(ctx, canvas, player, camera) {
 async function initMapRender() {
   buildTilesetRanges();
   decodeAllLayers();
-  buildWallTileSet();
   await loadImages();
   console.log("Mapa cargado:", mapData.width, "x", mapData.height, "| Rooms encontradas:", rooms.length);
 }

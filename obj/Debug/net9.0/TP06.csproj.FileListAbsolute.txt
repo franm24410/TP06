@@ -390,5 +390,5 @@ C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\refint\TP06.dll
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\TP06.pdb
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\TP06.genruntimeconfig.cache
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\ref\TP06.dll
+C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\9x5a2q6t6s-{0}-3m9cyujy65-3m9cyujy65.gz
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\qujrake7r8-{0}-707ctbe8pr-707ctbe8pr.gz
-C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\9x5a2q6t6s-{0}-bfj9m13hr0-bfj9m13hr0.gz
