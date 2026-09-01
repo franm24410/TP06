@@ -190,4 +190,6 @@ C:\Users\50235299\Desktop\TP06\obj\Debug\net9.0\TP06.pdb
 C:\Users\50235299\Desktop\TP06\obj\Debug\net9.0\TP06.genruntimeconfig.cache
 C:\Users\50235299\Desktop\TP06\obj\Debug\net9.0\ref\TP06.dll
 C:\Users\50235299\Desktop\TP06\obj\Debug\net9.0\compressed\7knrewp0mc-5ipweew5fc.gz
-C:\Users\50235299\Desktop\TP06\obj\Debug\net9.0\compressed\myogmasy63-efydg5r557.gz
+C:\Users\50235299\Desktop\TP06\obj\Debug\net9.0\compressed\463u2uvojd-e541o7q8gx.gz
+C:\Users\50235299\Desktop\TP06\obj\Debug\net9.0\compressed\qvgokuhdq9-nq2d0vgo9d.gz
+C:\Users\50235299\Desktop\TP06\obj\Debug\net9.0\compressed\rbbbvra5nl-7hgoa1f1h3.gz

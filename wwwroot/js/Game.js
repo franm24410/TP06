@@ -1,11 +1,16 @@
 ﻿const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-let playerX = 100;
-let playerY = 100;
+// player ahora es un objeto (world coords), porque mapRender.js
+// (getCurrentRoomName, checkDoors, drawScene) necesita player.x/y/width/height
+let player = {
+    x: 100,
+    y: 100,
+    width: 50,
+    height: 50
+};
 
-let playerWidth = 50;
-let playerHeight = 50;
+let camera = { x: 0, y: 0 };
 
 // Velocidad del personaje
 let speed = 4;
@@ -92,20 +97,17 @@ const spriteSources = {
     right: [
         "/img/Caminar/spr_f_maincharar_0.png",
         "/img/Caminar/spr_f_maincharar_1.png"
-
     ]
 };
 
 
 // Precarga de imágenes
-// Cada imagen guarda su propia bandera "cargada". No usamos img.complete
-// porque el navegador lo pone en true incluso cuando la imagen falló
-// (queda en estado "broken"), y eso rompía drawImage.
 const sprites = {};
 
 for (let direccion in spriteSources) {
     sprites[direccion] = spriteSources[direccion].map(function(src) {
         const img = new Image();
+
         img.cargada = false;
 
         img.onload = function() {
@@ -117,6 +119,7 @@ for (let direccion in spriteSources) {
         };
 
         img.src = src;
+
         return img;
     });
 }
@@ -198,19 +201,19 @@ function actualizarFrame(deltaTime, moviendose) {
 function update(deltaTime) {
 
     if (keys["w"] || keys["arrowup"]) {
-        playerY -= speed;
+        player.y -= speed;
     }
 
     if (keys["s"] || keys["arrowdown"]) {
-        playerY += speed;
+        player.y += speed;
     }
 
     if (keys["a"] || keys["arrowleft"]) {
-        playerX -= speed;
+        player.x -= speed;
     }
 
     if (keys["d"] || keys["arrowright"]) {
-        playerX += speed;
+        player.x += speed;
     }
 
 
@@ -218,52 +221,42 @@ function update(deltaTime) {
 
     actualizarFrame(deltaTime, moviendose);
 
+    // Puertas: si tocás una hitbox de la capa "Doors", te teletransporta
+    // (definida en mapRender.js, usa mapData.layers "Doors")
+    checkDoors(player);
 
-    // Limitar al personaje dentro del canvas
-    if (playerX < 0) {
-        playerX = 0;
-    }
-
-    if (playerX + playerWidth > canvas.width) {
-        playerX = canvas.width - playerWidth;
-    }
-
-    if (playerY < 0) {
-        playerY = 0;
-    }
-
-    if (playerY + playerHeight > canvas.height) {
-        playerY = canvas.height - playerHeight;
-    }
+    // NOTA: acá todavía falta tu colisión con paredes (capa "Paredes").
+    // Antes limitabas al canvas; ahora que el mundo es más grande que la
+    // pantalla, avisame cuando quieras y te armo checkWallCollision(player)
+    // usando esa capa igual que hicimos con las puertas.
 }
 
 
 // Dibujar
+
 function draw() {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const spriteActual = sprites[direccionActual][frameActual];
+    // 1. Dibuja el mapa (solo la room actual) y actualiza la cámara
+    drawScene(ctx, canvas, player, camera);
+
+    // 2. Dibuja el sprite del personaje, restando la cámara para que
+    //    quede en su posición correcta relativa a lo que se ve en pantalla
+    let spriteActual = sprites[direccionActual][frameActual];
+
+    if (!spriteActual || !spriteActual.cargada) {
+        spriteActual = sprites["idle"][0];
+    }
 
     if (spriteActual && spriteActual.cargada) {
 
         ctx.drawImage(
             spriteActual,
-            playerX,
-            playerY,
-            playerWidth,
-            playerHeight
-        );
-
-    } else {
-
-        // Respaldo mientras carga la imagen, o si falló (no hay .png)
-        ctx.fillStyle = "red";
-        ctx.fillRect(
-            playerX,
-            playerY,
-            playerWidth,
-            playerHeight
+            player.x - camera.x,
+            player.y - camera.y,
+            player.width,
+            player.height
         );
     }
 }
@@ -297,4 +290,7 @@ function gameLoop(timestamp) {
     requestAnimationFrame(gameLoop);
 }
 
-requestAnimationFrame(gameLoop);
+// Esperamos a que el mapa (imágenes + capas) esté listo antes de arrancar
+initMapRender().then(function() {
+    requestAnimationFrame(gameLoop);
+});
