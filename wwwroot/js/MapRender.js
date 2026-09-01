@@ -9,57 +9,88 @@ const TILE_H = mapData.tileheight;  // 20
 // ---------------------------------------------------------------------
 // 1. CONFIGURACIÓN DE TILESETS
 // ---------------------------------------------------------------------
-// Tiled exporta cada tileset como un "source" (.tsx), pero como no subiste
-// los .tsx, acá lo mapeamos a mano: qué imagen usa cada uno y cuántas
-// columnas tiene (ancho de la imagen / ancho de tile).
-// Si en algún momento conseguís los .tsx originales, avisame y te genero
-// esta tabla automáticamente sin tener que calcularla a ojo.
+// Tiled exporta cada tileset como un "source" (.tsx) con una ruta que
+// puede variar (../Downloads/Tiles/..., etc). Para no depender de la ruta
+// exacta, matcheamos solo por el NOMBRE DE ARCHIVO al final de esa ruta.
+//
+// "columns" = cuántos tiles hay por fila en la imagen. Para tilesets de
+// fondo/terreno se calcula como ancho_imagen / TILE_W. Para sprites de
+// un solo objeto (el tileset entero es 1 tile), columns = 1.
+const TILE_FOLDER = "/Tiles/";
+
 const TILESET_CONFIG = {
-  "bg_ruinseasynam2.tsx": { image: "Tiles/bg_ruinseasynam2.png", columns: 8 },
-  "bg_ruinseasynam3.tsx": { image: "Tiles/bg_ruinseasynam3.png", columns: 8 },
-  "Tiles/bg_tundratiles.tsx": { image: "Tiles/bg_tundratiles.png", columns: 9 },
-  "spr_snowpap_0.tsx": { image: "Tiles/spr_snowpap_0.png", columns: 1 },
-  "spr_groundswitch1_1.tsx": { image: "Tiles/spr_groundswitch1_1.png", columns: 1 },
-  "spr_npc_sign_0.tsx": { image: "Tiles/spr_npc_sign_0.png", columns: 1 },
-  "spr_smallweb_0.tsx": { image: "Tiles/spr_smallweb_0.png", columns: 1 },
-  "spr_xmastree_0.tsx": { image: "Tiles/spr_xmastree_0.png", columns: 1 },
+  "bg_ruinseasynam1.tsx": { image: "bg_ruinseasynam1.png", columns: 8 },
+  "bg_ruinseasynam2.tsx": { image: "bg_ruinseasynam2.png", columns: 8 },
+  "bg_ruinseasynam3.tsx": { image: "bg_ruinseasynam3.png", columns: 8 },
+  "bg_ruintiles1.tsx":    { image: "bg_ruintiles1.png",    columns: 6 },
+  "bg_tundratiles.tsx":   { image: "bg_tundratiles.png",   columns: 9 },
+  "spr_snowpap_0.tsx":         { image: "spr_snowpap_0.png",         columns: 1 },
+  "spr_groundswitch1_0.tsx":   { image: "spr_groundswitch1_0.png",   columns: 1 },
+  "spr_groundswitch1_1.tsx":   { image: "spr_groundswitch1_1.png",   columns: 1 },
+  "spr_npc_sign_0.tsx":        { image: "spr_npc_sign_0.png",        columns: 1 },
+  "spr_smallweb_0.tsx":        { image: "spr_smallweb_0.png",        columns: 1 },
+  "spr_xmastree_0.tsx":        { image: "spr_xmastree_0.png",        columns: 1 },
+  "spr_spiketile_0.tsx":       { image: "spr_spiketile_0.png",       columns: 1 },
+  "spr_spiketile_1.tsx":       { image: "spr_spiketile_1.png",       columns: 1 },
+  "spr_papyrushouse_0.tsx":    { image: "spr_papyrushouse_0.png",    columns: 1 },
+  "spr_snowdinlogo_ja_0.tsx":  { image: "spr_snowdinlogo_ja_0.png",  columns: 1 },
+  "spr_vinespillar_0.tsx":     { image: "spr_vinespillar_0.png",     columns: 1 },
 };
 
-// Construye, para cada gid (id global de tile), qué imagen y qué recorte usar.
+// Extrae solo el nombre de archivo de una ruta, sin importar el formato
+// (../Downloads/Tiles/x.tsx, Tiles/x.tsx, x.tsx, con \ o /, etc.)
+function getFileName(path) {
+  if (!path) return null;
+  return path.split(/[\\/]/).pop();
+}
+
 const loadedImages = {};
-const tilesetRanges = []; // [{firstgid, lastgid, config}]
+const tilesetRanges = []; // [{firstgid, lastgid, columns, image}]
 
 function buildTilesetRanges() {
   const list = mapData.tilesets; // ya vienen ordenados por firstgid
   for (let i = 0; i < list.length; i++) {
     const ts = list[i];
-    const config = TILESET_CONFIG[ts.source];
-    if (!config) {
-      console.warn("Falta configuración para tileset:", ts.source);
+    const nextFirstgid = list[i + 1] ? list[i + 1].firstgid : Infinity;
+
+    // Caso 1: tileset embebido (trae "image" directo, sin necesitar tabla)
+    if (ts.image) {
+      tilesetRanges.push({
+        firstgid: ts.firstgid,
+        lastgid: nextFirstgid - 1,
+        columns: ts.columns,
+        image: TILE_FOLDER + getFileName(ts.image),
+      });
       continue;
     }
-    const nextFirstgid = list[i + 1] ? list[i + 1].firstgid : Infinity;
+
+    // Caso 2: tileset externo (.tsx) -> buscamos por nombre de archivo en la tabla
+    const fileName = getFileName(ts.source);
+    const config = fileName ? TILESET_CONFIG[fileName] : null;
+    if (!config) {
+      console.warn("Falta agregar a TILESET_CONFIG:", fileName || "(tileset sin nombre, probablemente no se usa para dibujar)");
+      continue;
+    }
     tilesetRanges.push({
       firstgid: ts.firstgid,
       lastgid: nextFirstgid - 1,
       columns: config.columns,
-      image: config.image,
+      image: TILE_FOLDER + config.image,
     });
   }
 }
 
 function loadImages() {
   const promises = [];
-  for (const key in TILESET_CONFIG) {
-    const src = TILESET_CONFIG[key].image;
-    if (loadedImages[src]) continue;
+  for (const range of tilesetRanges) {
+    if (loadedImages[range.image]) continue;
     const img = new Image();
     const p = new Promise((resolve) => {
       img.onload = resolve;
-      img.onerror = () => { console.error("No se pudo cargar imagen:", src); resolve(); };
+      img.onerror = () => { console.error("No se pudo cargar imagen:", range.image); resolve(); };
     });
-    img.src = src;
-    loadedImages[src] = img;
+    img.src = range.image;
+    loadedImages[range.image] = img;
     promises.push(p);
   }
   return Promise.all(promises);
@@ -139,8 +170,12 @@ function drawTile(ctx, gid, worldX, worldY, camera) {
   if (!img || !img.complete) return;
 
   const localId = gid - range.firstgid;
-  const sx = (localId % range.columns) * TILE_W;
-  const sy = Math.floor(localId / range.columns) * TILE_H;
+  const margin = range.margin || 0;
+  const spacing = range.spacing || 0;
+  const col = localId % range.columns;
+  const row = Math.floor(localId / range.columns);
+  const sx = margin + col * (TILE_W + spacing);
+  const sy = margin + row * (TILE_H + spacing);
 
   const dx = worldX * TILE_W - camera.x;
   const dy = worldY * TILE_H - camera.y;
