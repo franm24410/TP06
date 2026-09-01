@@ -10,20 +10,26 @@
         body {
             margin: 0;
             overflow: hidden;
+            background-color: black;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
             background-color: black;
-        }
+            image-rendering: pixelated;
+            width: min(1280px, 95vw);
+            height: min(960px, 95vh);
+            aspect-ratio: 4 / 3;
+}
     </style>
 
 </head>
 
 <body>
-    <canvas id="game" width="1913" height="950"></canvas>
+    <canvas id="game" width="640" height="480"></canvas>
 
     <script src="~/Tiles/MAPATERMINADOAHORASI.js"></script>
     <script src="~/js/MapRender.js"></script>

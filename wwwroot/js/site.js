@@ -4,16 +4,16 @@ const ctx = canvas.getContext("2d");
 // player ahora es un objeto (world coords), porque mapRender.js
 // (getCurrentRoomName, checkDoors, drawScene) necesita player.x/y/width/height
 let player = {
-    x: 100,
-    y: 100,
-    width: 50,
-    height: 50
+    x: 1550,
+    y: 740,
+    width: 20,
+    height: 20
 };
 
 let camera = { x: 0, y: 0 };
 
 // Velocidad del personaje
-let speed = 4;
+let speed = 5;
 
 let keys = {};
 let grupoActivo = null;
@@ -200,35 +200,33 @@ function actualizarFrame(deltaTime, moviendose) {
 // Actualiza el juego
 function update(deltaTime) {
 
+    let dx = 0;
+    let dy = 0;
+
     if (keys["w"] || keys["arrowup"]) {
-        player.y -= speed;
+        dy -= speed;
     }
 
     if (keys["s"] || keys["arrowdown"]) {
-        player.y += speed;
+        dy += speed;
     }
 
     if (keys["a"] || keys["arrowleft"]) {
-        player.x -= speed;
+        dx -= speed;
     }
 
     if (keys["d"] || keys["arrowright"]) {
-        player.x += speed;
+        dx += speed;
     }
 
+    // Mueve respetando la capa "Paredes" (definida en mapRender.js)
+    moveWithWallCollision(player, dx, dy);
 
     const moviendose = actualizarDireccion();
 
     actualizarFrame(deltaTime, moviendose);
 
-    // Puertas: si tocás una hitbox de la capa "Doors", te teletransporta
-    // (definida en mapRender.js, usa mapData.layers "Doors")
     checkDoors(player);
-
-    // NOTA: acá todavía falta tu colisión con paredes (capa "Paredes").
-    // Antes limitabas al canvas; ahora que el mundo es más grande que la
-    // pantalla, avisame cuando quieras y te armo checkWallCollision(player)
-    // usando esa capa igual que hicimos con las puertas.
 }
 
 
@@ -262,16 +260,7 @@ function draw() {
 }
 
 
-// Ajustar canvas a la ventana
-function resizeCanvas() {
 
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
-
-resizeCanvas();
-
-window.addEventListener("resize", resizeCanvas);
 
 
 // Game loop

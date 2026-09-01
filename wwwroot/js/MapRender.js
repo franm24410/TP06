@@ -145,19 +145,129 @@ function decodeAllLayers() {
 // ---------------------------------------------------------------------
 // 3. ROOMS (habitaciones) — para saber qué recortar
 // ---------------------------------------------------------------------
+// Tus rooms están dibujadas como POLÍGONOS en Tiled (no rectángulos).
+// Un objeto polígono trae: x, y (origen) + "polygon": [{x,y}, ...] con
+// puntos RELATIVOS a ese origen. Acá los convertimos a puntos absolutos.
 const roomsLayer = mapData.layers.find(l => l.name === "Rooms");
 const rooms = roomsLayer ? roomsLayer.objects : [];
 
-function getRoomRectsByName(name) {
-  return rooms.filter(r => r.name === name);
+// Devuelve los puntos absolutos (en coordenadas del mapa) de un objeto,
+// sea polígono o rectángulo.
+function getAbsolutePoints(obj) {
+  if (obj.polygon) {
+    return obj.polygon.map(p => ({ x: obj.x + p.x, y: obj.y + p.y }));
+  }
+  // Fallback por si alguna room es un rectángulo común
+  return [
+    { x: obj.x, y: obj.y },
+    { x: obj.x + obj.width, y: obj.y },
+    { x: obj.x + obj.width, y: obj.y + obj.height },
+    { x: obj.x, y: obj.y + obj.height },
+  ];
+}
+
+// Test punto-en-polígono (algoritmo ray casting)
+function pointInPolygon(px, py, points) {
+  let inside = false;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+    const xi = points[i].x, yi = points[i].y;
+    const xj = points[j].x, yj = points[j].y;
+    const intersect = ((yi > py) !== (yj > py)) &&
+      (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
 }
 
 function getCurrentRoomName(player) {
-  const hit = rooms.find(r =>
-    player.x >= r.x && player.x <= r.x + r.width &&
-    player.y >= r.y && player.y <= r.y + r.height
+  for (const room of rooms) {
+    const points = getAbsolutePoints(room);
+    if (pointInPolygon(player.x, player.y, points)) return room.name;
+  }
+  return null;
+}
+
+// Devuelve, para una room (puede tener varias partes con el mismo name),
+// la lista de arrays de puntos absolutos — uno por cada parte.
+function getRoomPartsByName(name) {
+  return rooms.filter(r => r.name === name).map(getAbsolutePoints);
+}
+
+// ---------------------------------------------------------------------
+// 3c. COLISIÓN DE PAREDES — cualquier tile no vacío en "Paredes" bloquea
+// ---------------------------------------------------------------------
+const wallTileSet = new Set(); // guarda "col,row" de cada tile de pared
+
+function buildWallTileSet() {
+  const tiles = decodedLayers["Paredes"];
+  if (!tiles) return;
+  for (const t of tiles) wallTileSet.add(t.tileX + "," + t.tileY);
+}
+
+// ¿Un rectángulo (en px, coords de mundo) toca algún tile de pared?
+function rectHitsWall(rect) {
+  const startCol = Math.floor(rect.x / TILE_W);
+  const endCol = Math.floor((rect.x + rect.width - 1) / TILE_W);
+  const startRow = Math.floor(rect.y / TILE_H);
+  const endRow = Math.floor((rect.y + rect.height - 1) / TILE_H);
+  for (let col = startCol; col <= endCol; col++) {
+    for (let row = startRow; row <= endRow; row++) {
+      if (wallTileSet.has(col + "," + row)) return true;
+    }
+  }
+  return false;
+}
+
+// Mueve al jugador dx,dy respetando paredes. Se mueve eje por eje para
+// poder "deslizarse" contra la pared en vez de trabarse en diagonal.
+function moveWithWallCollision(player, dx, dy) {
+  if (dx !== 0) {
+    const testX = { x: player.x + dx, y: player.y, width: player.width, height: player.height };
+    if (!rectHitsWall(testX)) player.x += dx;
+  }
+  if (dy !== 0) {
+    const testY = { x: player.x, y: player.y + dy, width: player.width, height: player.height };
+    if (!rectHitsWall(testY)) player.y += dy;
+  }
+}
+
+// ---------------------------------------------------------------------
+// 3b. DOORS (puertas) — teletransportan al jugador a otra room
+// ---------------------------------------------------------------------
+const doorsLayer = mapData.layers.find(l => l.name === "Doors");
+const doors = doorsLayer ? doorsLayer.objects : [];
+
+// Convierte el array "properties" de Tiled ([{name, value}, ...]) en un objeto plano {clave: valor}
+function propsToObject(obj) {
+  const result = {};
+  if (obj.properties) {
+    for (const p of obj.properties) result[p.name] = p.value;
+  }
+  return result;
+}
+
+function rectsOverlap(a, b) {
+  return (
+    a.x < b.x + b.width &&
+    a.x + a.width > b.x &&
+    a.y < b.y + b.height &&
+    a.y + a.height > b.y
   );
-  return hit ? hit.name : null;
+}
+
+// Llamar en cada frame, después de mover al jugador. Si está tocando una
+// puerta, lo teletransporta a targetX/targetY y activa targetRoom.
+function checkDoors(player) {
+  for (const door of doors) {
+    if (rectsOverlap(player, door)) {
+      const props = propsToObject(door);
+      if (props.targetX !== undefined) player.x = props.targetX;
+      if (props.targetY !== undefined) player.y = props.targetY;
+      // No hace falta guardar targetRoom aparte: getCurrentRoomName()
+      // ya detecta la room nueva sola, en base a la posición actualizada.
+      break; // evita procesar más de una puerta en el mismo frame
+    }
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -184,30 +294,35 @@ function drawTile(ctx, gid, worldX, worldY, camera) {
 
 function drawScene(ctx, canvas, player, camera) {
   const currentRoomName = getCurrentRoomName(player);
-  const roomRects = currentRoomName ? getRoomRectsByName(currentRoomName) : [];
+  const roomParts = currentRoomName ? getRoomPartsByName(currentRoomName) : [];
 
   // Fondo negro (todo lo que no es la room actual queda tapado)
   ctx.fillStyle = "black";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  if (roomRects.length === 0) {
+  if (roomParts.length === 0) {
     // Jugador fuera de cualquier room conocida: no dibujamos nada por ahora
     return;
   }
 
-  // Cámara: centrada en el jugador, sin salir del bounding box de la room
-  const minX = Math.min(...roomRects.map(r => r.x));
-  const minY = Math.min(...roomRects.map(r => r.y));
-  const maxX = Math.max(...roomRects.map(r => r.x + r.width));
-  const maxY = Math.max(...roomRects.map(r => r.y + r.height));
+  // Bounding box de todos los puntos (para no dejar salir la cámara del cuarto)
+  const allPoints = roomParts.flat();
+  const minX = Math.min(...allPoints.map(p => p.x));
+  const minY = Math.min(...allPoints.map(p => p.y));
+  const maxX = Math.max(...allPoints.map(p => p.x));
+  const maxY = Math.max(...allPoints.map(p => p.y));
 
   camera.x = Math.max(minX, Math.min(player.x - canvas.width / 2, Math.max(minX, maxX - canvas.width)));
   camera.y = Math.max(minY, Math.min(player.y - canvas.height / 2, Math.max(minY, maxY - canvas.height)));
 
   ctx.save();
   ctx.beginPath();
-  for (const r of roomRects) {
-    ctx.rect(r.x - camera.x, r.y - camera.y, r.width, r.height);
+  for (const points of roomParts) {
+    ctx.moveTo(points[0].x - camera.x, points[0].y - camera.y);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x - camera.x, points[i].y - camera.y);
+    }
+    ctx.closePath();
   }
   ctx.clip();
 
@@ -229,6 +344,7 @@ function drawScene(ctx, canvas, player, camera) {
 async function initMapRender() {
   buildTilesetRanges();
   decodeAllLayers();
+  buildWallTileSet();
   await loadImages();
   console.log("Mapa cargado:", mapData.width, "x", mapData.height, "| Rooms encontradas:", rooms.length);
 }
