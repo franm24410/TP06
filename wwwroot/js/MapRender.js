@@ -219,10 +219,15 @@ function moveWithWallCollision(player, dx, dy) {
 }
 
 // ---------------------------------------------------------------------
-// 3b. DOORS (puertas) — teletransportan al jugador a otra room
+// 3b. DOORS (puertas) — teletransportan al jugador a otra puerta,
+// con transición de pantalla negra de 0.5s
 // ---------------------------------------------------------------------
 const doorsLayer = mapData.layers.find(l => l.name === "Doors");
 const doors = doorsLayer ? doorsLayer.objects : [];
+
+// Índice rápido: nombre de puerta ("ph3") -> objeto puerta
+const doorsByName = {};
+for (const d of doors) doorsByName[d.name] = d;
 
 // Convierte el array "properties" de Tiled ([{name, value}, ...]) en un objeto plano {clave: valor}
 function propsToObject(obj) {
@@ -242,17 +247,92 @@ function rectsOverlap(a, b) {
   );
 }
 
+const DIRECTION_OFFSETS = {
+  up:    { x: 0, y: -1 },
+  down:  { x: 0, y: 1 },
+  left:  { x: -1, y: 0 },
+  right: { x: 1, y: 0 },
+};
+
+// Punto de aparición: centro de la puerta destino + 1 tile en su "direction"
+function getDoorSpawnPoint(door) {
+  const props = propsToObject(door);
+  const dir = DIRECTION_OFFSETS[props.direction] || { x: 0, y: 1 };
+  const centerX = door.x + door.width / 2;
+  const centerY = door.y + door.height / 2;
+  return {
+    x: centerX + dir.x * TILE_W,
+    y: centerY + dir.y * TILE_H,
+  };
+}
+
+// --- Estado de la transición (pantalla negra 0.5s, sin poder moverse) ---
+let doorTransition = null; // { player, timer, duration, targetX, targetY, teleported }
+
+function isTransitioning() {
+  return doorTransition !== null;
+}
+
+function startDoorTransition(player, targetX, targetY, duration = 500) {
+  if (doorTransition) return;
+  doorTransition = { player, timer: 0, duration, targetX, targetY, teleported: false };
+}
+
+// Llamar en cada frame (siempre, incluso durante la transición) para
+// avanzar el timer y hacer el teletransporte a mitad de camino.
+function updateDoorTransition(deltaTime) {
+  if (!doorTransition) return;
+  doorTransition.timer += deltaTime;
+  const half = doorTransition.duration / 2;
+
+  if (!doorTransition.teleported && doorTransition.timer >= half) {
+    doorTransition.player.x = doorTransition.targetX;
+    doorTransition.player.y = doorTransition.targetY;
+    doorTransition.teleported = true;
+  }
+  if (doorTransition.timer >= doorTransition.duration) {
+    doorTransition = null;
+  }
+}
+
+// 0 = transparente, 1 = negro total. Sube los primeros 250ms, baja los últimos 250ms.
+function getTransitionAlpha() {
+  if (!doorTransition) return 0;
+  const half = doorTransition.duration / 2;
+  if (doorTransition.timer < half) {
+    return doorTransition.timer / half;
+  }
+  return 1 - (doorTransition.timer - half) / half;
+}
+
+// Dibuja el overlay negro de la transición. Llamar al final de tu draw(),
+// después de dibujar mapa y personaje.
+function drawTransitionOverlay(ctx, canvas) {
+  const alpha = getTransitionAlpha();
+  if (alpha <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "black";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.restore();
+}
+
 // Llamar en cada frame, después de mover al jugador. Si está tocando una
-// puerta, lo teletransporta a targetX/targetY y activa targetRoom.
+// puerta, arranca la transición hacia la puerta destino (targetDoor).
 function checkDoors(player) {
+  if (isTransitioning()) return; // no reprocesar mientras ya está viajando
   for (const door of doors) {
     if (rectsOverlap(player, door)) {
       const props = propsToObject(door);
-      if (props.targetX !== undefined) player.x = props.targetX;
-      if (props.targetY !== undefined) player.y = props.targetY;
-      // No hace falta guardar targetRoom aparte: getCurrentRoomName()
-      // ya detecta la room nueva sola, en base a la posición actualizada.
-      break; // evita procesar más de una puerta en el mismo frame
+      const targetName = "ph" + props.targetDoor;
+      const targetDoor = doorsByName[targetName];
+      if (!targetDoor) {
+        console.warn("La puerta", door.name, "apunta a una puerta que no existe:", targetName);
+        return;
+      }
+      const spawn = getDoorSpawnPoint(targetDoor);
+      startDoorTransition(player, spawn.x, spawn.y);
+      break;
     }
   }
 }

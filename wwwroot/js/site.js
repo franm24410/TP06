@@ -13,7 +13,7 @@ let player = {
 let camera = { x: 0, y: 0 };
 
 // Velocidad del personaje
-let speed = 5;
+let speed = 4;
 
 let keys = {};
 let grupoActivo = null;
@@ -200,6 +200,13 @@ function actualizarFrame(deltaTime, moviendose) {
 // Actualiza el juego
 function update(deltaTime) {
 
+    // Mientras dura la transición de puerta (pantalla en negro): no se
+    // procesa movimiento ni animación, solo avanza el timer de la transición.
+    if (isTransitioning()) {
+        updateDoorTransition(deltaTime);
+        return;
+    }
+
     let dx = 0;
     let dy = 0;
 
@@ -219,7 +226,7 @@ function update(deltaTime) {
         dx += speed;
     }
 
-    // Mueve respetando la capa "Paredes" (definida en mapRender.js)
+    // Mueve respetando la capa "Interactuable" (definida en mapRender.js)
     moveWithWallCollision(player, dx, dy);
 
     const moviendose = actualizarDireccion();
@@ -257,6 +264,9 @@ function draw() {
             player.height
         );
     }
+
+    // 3. Overlay negro de la transición entre puertas (0.5s), encima de todo
+    drawTransitionOverlay(ctx, canvas);
 }
 
 
