@@ -375,7 +375,6 @@ C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\8h7bdd6eja-{0}-jjsuc0pu
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\erpz2wwdag-{0}-9vr69e8ynj-9vr69e8ynj.gz
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\ljl7jmzsbd-{0}-87fc7y1x7t-87fc7y1x7t.gz
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\re9t5f7l87-{0}-mlv21k5csn-mlv21k5csn.gz
-C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\uwhuieei2d-{0}-7hgoa1f1h3-7hgoa1f1h3.gz
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\vnrzv3djjx-{0}-rb5dqfhmlu-rb5dqfhmlu.gz
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\2dnky5kr21-{0}-rb5dqfhmlu-rb5dqfhmlu.gz
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\staticwebassets.build.json
@@ -388,8 +387,6 @@ C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\refint\TP06.dll
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\TP06.pdb
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\TP06.genruntimeconfig.cache
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\ref\TP06.dll
-C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\9x5a2q6t6s-{0}-3m9cyujy65-3m9cyujy65.gz
-C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\qujrake7r8-{0}-707ctbe8pr-707ctbe8pr.gz
 C:\Users\50235299\Desktop\TP06\obj\Debug\net9.0\compressed\qvgokuhdq9-i5z4oix5kp.gz
 C:\Users\50235299\Desktop\TP06\obj\Debug\net9.0\compressed\myogmasy63-nx24t8bb2g.gz
 C:\Users\50235173\Desktop\TP06\bin\Debug\net9.0\appsettings.Development.json
@@ -491,3 +488,6 @@ C:\Users\50235173\Desktop\TP06\obj\Debug\net9.0\ref\TP06.dll
 C:\Users\50235173\Desktop\TP06\obj\Debug\net9.0\compressed\qvgokuhdq9-tev8f74du8.gz
 C:\Users\50235173\Desktop\TP06\obj\Debug\net9.0\compressed\myogmasy63-705eya3ud8.gz
 C:\Users\50235173\Desktop\TP06\obj\Debug\net9.0\compressed\rbbbvra5nl-7hgoa1f1h3.gz
+C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\qujrake7r8-{0}-tev8f74du8-tev8f74du8.gz
+C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\9x5a2q6t6s-{0}-705eya3ud8-705eya3ud8.gz
+C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\uwhuieei2d-{0}-lua3zemaz4-lua3zemaz4.gz
