@@ -87,7 +87,7 @@ function loadImages() {
     const img = new Image();
     const p = new Promise((resolve) => {
       img.onload = resolve;
-      img.onerror = () => { console.error("No se pudo cargar imagen:", range.image); resolve(); };
+      img.onerror = () => { console.error("No se pudo cargar imagen:", range.image); img.failed = true; resolve(); };
     });
     img.src = range.image;
     loadedImages[range.image] = img;
@@ -255,27 +255,38 @@ const DIRECTION_OFFSETS = {
 };
 
 // Punto de aparición: centro de la puerta destino + 1 tile en su "direction"
+// Punto de aparición: pegado al BORDE de la puerta destino (no al centro),
+// desplazado 1 tile hacia afuera en su "direction". Usar el borde (no el
+// centro) evita que el punto quede muy cerca de la puerta si esta es
+// grande, sin importar su ancho/alto.
 function getDoorSpawnPoint(door) {
   const props = propsToObject(door);
   const dir = DIRECTION_OFFSETS[props.direction] || { x: 0, y: 1 };
-  const centerX = door.x + door.width / 2;
-  const centerY = door.y + door.height / 2;
-  return {
-    x: centerX + dir.x * TILE_W,
-    y: centerY + dir.y * TILE_H,
-  };
+
+  let spawnX = door.x + door.width / 2;
+  let spawnY = door.y + door.height / 2;
+
+  if (dir.x !== 0) {
+    spawnX = dir.x > 0 ? door.x + door.width + TILE_W / 2 : door.x - TILE_W / 2;
+  }
+  if (dir.y !== 0) {
+    spawnY = dir.y > 0 ? door.y + door.height + TILE_H / 2 : door.y - TILE_H / 2;
+  }
+
+  return { x: spawnX, y: spawnY };
 }
 
 // --- Estado de la transición (pantalla negra 0.5s, sin poder moverse) ---
-let doorTransition = null; // { player, timer, duration, targetX, targetY, teleported }
+let doorTransition = null; // { player, timer, duration, targetX, targetY, teleported, arrivalDoor }
+let lastUsedDoor = null;   // puerta destino recién usada; se ignora hasta que el jugador se aleje de ella
 
 function isTransitioning() {
   return doorTransition !== null;
 }
 
-function startDoorTransition(player, targetX, targetY, duration = 500) {
+function startDoorTransition(player, targetX, targetY, arrivalDoor, duration = 500) {
   if (doorTransition) return;
-  doorTransition = { player, timer: 0, duration, targetX, targetY, teleported: false };
+  doorTransition = { player, timer: 0, duration, targetX, targetY, teleported: false, arrivalDoor };
 }
 
 // Llamar en cada frame (siempre, incluso durante la transición) para
@@ -289,6 +300,7 @@ function updateDoorTransition(deltaTime) {
     doorTransition.player.x = doorTransition.targetX;
     doorTransition.player.y = doorTransition.targetY;
     doorTransition.teleported = true;
+    lastUsedDoor = doorTransition.arrivalDoor; // evita que se retriggeree sola apenas llegamos
   }
   if (doorTransition.timer >= doorTransition.duration) {
     doorTransition = null;
@@ -321,7 +333,14 @@ function drawTransitionOverlay(ctx, canvas) {
 // puerta, arranca la transición hacia la puerta destino (targetDoor).
 function checkDoors(player) {
   if (isTransitioning()) return; // no reprocesar mientras ya está viajando
+
+  // Si nos alejamos de la última puerta usada, ya se puede volver a activar
+  if (lastUsedDoor && !rectsOverlap(player, lastUsedDoor)) {
+    lastUsedDoor = null;
+  }
+
   for (const door of doors) {
+    if (door === lastUsedDoor) continue; // evita retriggerear la puerta a la que acabamos de llegar
     if (rectsOverlap(player, door)) {
       const props = propsToObject(door);
       const targetName = "ph" + props.targetDoor;
@@ -331,7 +350,11 @@ function checkDoors(player) {
         return;
       }
       const spawn = getDoorSpawnPoint(targetDoor);
-      startDoorTransition(player, spawn.x, spawn.y);
+      // spawn es el punto donde queremos el CENTRO del jugador, así que
+      // restamos la mitad de su ancho/alto para ubicar su esquina (x,y)
+      const finalX = spawn.x - player.width / 2;
+      const finalY = spawn.y - player.height / 2;
+      startDoorTransition(player, finalX, finalY, targetDoor);
       break;
     }
   }
@@ -344,7 +367,7 @@ function drawTile(ctx, gid, worldX, worldY, camera) {
   const range = tilesetRanges.find(r => gid >= r.firstgid && gid <= r.lastgid);
   if (!range) return;
   const img = loadedImages[range.image];
-  if (!img || !img.complete) return;
+  if (!img || !img.complete || img.failed) return;
 
   const localId = gid - range.firstgid;
   const margin = range.margin || 0;
