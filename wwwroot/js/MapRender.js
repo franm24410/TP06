@@ -9,13 +9,6 @@ const TILE_H = mapData.tileheight;  // 20
 // ---------------------------------------------------------------------
 // 1. CONFIGURACIÓN DE TILESETS
 // ---------------------------------------------------------------------
-// Tiled exporta cada tileset como un "source" (.tsx) con una ruta que
-// puede variar (../Downloads/Tiles/..., etc). Para no depender de la ruta
-// exacta, matcheamos solo por el NOMBRE DE ARCHIVO al final de esa ruta.
-//
-// "columns" = cuántos tiles hay por fila en la imagen. Para tilesets de
-// fondo/terreno se calcula como ancho_imagen / TILE_W. Para sprites de
-// un solo objeto (el tileset entero es 1 tile), columns = 1.
 const TILE_FOLDER = "/Tiles/";
 
 const TILESET_CONFIG = {
@@ -37,23 +30,20 @@ const TILESET_CONFIG = {
   "spr_vinespillar_0.tsx":     { image: "spr_vinespillar_0.png",     columns: 1 },
 };
 
-// Extrae solo el nombre de archivo de una ruta, sin importar el formato
-// (../Downloads/Tiles/x.tsx, Tiles/x.tsx, x.tsx, con \ o /, etc.)
 function getFileName(path) {
   if (!path) return null;
   return path.split(/[\\/]/).pop();
 }
 
 const loadedImages = {};
-const tilesetRanges = []; // [{firstgid, lastgid, columns, image}]
+const tilesetRanges = [];
 
 function buildTilesetRanges() {
-  const list = mapData.tilesets; // ya vienen ordenados por firstgid
+  const list = mapData.tilesets;
   for (let i = 0; i < list.length; i++) {
     const ts = list[i];
     const nextFirstgid = list[i + 1] ? list[i + 1].firstgid : Infinity;
 
-    // Caso 1: tileset embebido (trae "image" directo, sin necesitar tabla)
     if (ts.image) {
       tilesetRanges.push({
         firstgid: ts.firstgid,
@@ -64,11 +54,10 @@ function buildTilesetRanges() {
       continue;
     }
 
-    // Caso 2: tileset externo (.tsx) -> buscamos por nombre de archivo en la tabla
     const fileName = getFileName(ts.source);
     const config = fileName ? TILESET_CONFIG[fileName] : null;
     if (!config) {
-      console.warn("Falta agregar a TILESET_CONFIG:", fileName || "(tileset sin nombre, probablemente no se usa para dibujar)");
+      console.warn("Falta agregar a TILESET_CONFIG:", fileName || "(tileset sin nombre)");
       continue;
     }
     tilesetRanges.push({
@@ -97,9 +86,9 @@ function loadImages() {
 }
 
 // ---------------------------------------------------------------------
-// 2. DECODIFICAR CAPAS (base64, sin compresión, formato "chunks" por ser mapa infinito)
+// 2. DECODIFICAR CAPAS
 // ---------------------------------------------------------------------
-const FLIP_MASK = 0x1FFFFFFF; // Tiled usa los 3 bits más altos del gid para flip/rotación
+const FLIP_MASK = 0x1FFFFFFF;
 
 function decodeChunkData(base64) {
   const binary = atob(base64);
@@ -109,7 +98,6 @@ function decodeChunkData(base64) {
   return gids;
 }
 
-// Devuelve todos los tiles de una capa como lista de {gid, worldX, worldY} (en unidades de tile, no px)
 function getLayerTiles(layer) {
   const tiles = [];
   if (!layer.chunks) return tiles;
@@ -119,7 +107,7 @@ function getLayerTiles(layer) {
       for (let col = 0; col < chunk.width; col++) {
         const rawGid = gids[row * chunk.width + col];
         const gid = rawGid & FLIP_MASK;
-        if (gid === 0) continue; // 0 = tile vacío
+        if (gid === 0) continue;
         tiles.push({
           gid,
           tileX: chunk.x + col,
@@ -131,7 +119,6 @@ function getLayerTiles(layer) {
   return tiles;
 }
 
-// Cachea los tiles decodificados de cada capa visual (se decodifican una sola vez)
 const TILE_LAYER_NAMES = ["background", "Piso", "Paredes", "Detalles-Piso", "Detalles-Pared", "Objeto"];
 const decodedLayers = {};
 
@@ -143,21 +130,15 @@ function decodeAllLayers() {
 }
 
 // ---------------------------------------------------------------------
-// 3. ROOMS (habitaciones) — para saber qué recortar
+// 3. ROOMS
 // ---------------------------------------------------------------------
-// Tus rooms están dibujadas como POLÍGONOS en Tiled (no rectángulos).
-// Un objeto polígono trae: x, y (origen) + "polygon": [{x,y}, ...] con
-// puntos RELATIVOS a ese origen. Acá los convertimos a puntos absolutos.
 const roomsLayer = mapData.layers.find(l => l.name === "Rooms");
 const rooms = roomsLayer ? roomsLayer.objects : [];
 
-// Devuelve los puntos absolutos (en coordenadas del mapa) de un objeto,
-// sea polígono o rectángulo.
 function getAbsolutePoints(obj) {
   if (obj.polygon) {
     return obj.polygon.map(p => ({ x: obj.x + p.x, y: obj.y + p.y }));
   }
-  // Fallback por si alguna room es un rectángulo común
   return [
     { x: obj.x, y: obj.y },
     { x: obj.x + obj.width, y: obj.y },
@@ -166,7 +147,6 @@ function getAbsolutePoints(obj) {
   ];
 }
 
-// Test punto-en-polígono (algoritmo ray casting)
 function pointInPolygon(px, py, points) {
   let inside = false;
   for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
@@ -187,26 +167,20 @@ function getCurrentRoomName(player) {
   return null;
 }
 
-// Devuelve, para una room (puede tener varias partes con el mismo name),
-// la lista de arrays de puntos absolutos — uno por cada parte.
 function getRoomPartsByName(name) {
   return rooms.filter(r => r.name === name).map(getAbsolutePoints);
 }
 
 // ---------------------------------------------------------------------
-// 3c. COLISIÓN DE PAREDES — bloquea el paso con los rectángulos de la
-// capa de objetos "Interactuable"
+// 3c. COLISIÓN DE PAREDES
 // ---------------------------------------------------------------------
 const wallsLayer = mapData.layers.find(l => l.name === "Interactuable");
 const wallObjects = wallsLayer ? wallsLayer.objects : [];
 
-// ¿Un rectángulo (en px, coords de mundo) toca algún objeto de "Interactuable"?
 function rectHitsWall(rect) {
   return wallObjects.some(obj => rectsOverlap(rect, obj));
 }
 
-// Mueve al jugador dx,dy respetando paredes. Se mueve eje por eje para
-// poder "deslizarse" contra la pared en vez de trabarse en diagonal.
 function moveWithWallCollision(player, dx, dy) {
   if (dx !== 0) {
     const testX = { x: player.x + dx, y: player.y, width: player.width, height: player.height };
@@ -219,17 +193,14 @@ function moveWithWallCollision(player, dx, dy) {
 }
 
 // ---------------------------------------------------------------------
-// 3b. DOORS (puertas) — teletransportan al jugador a otra puerta,
-// con transición de pantalla negra de 0.5s
+// 3b. DOORS (puertas)
 // ---------------------------------------------------------------------
 const doorsLayer = mapData.layers.find(l => l.name === "Doors");
 const doors = doorsLayer ? doorsLayer.objects : [];
 
-// Índice rápido: nombre de puerta ("ph3") -> objeto puerta
 const doorsByName = {};
 for (const d of doors) doorsByName[d.name] = d;
 
-// Convierte el array "properties" de Tiled ([{name, value}, ...]) en un objeto plano {clave: valor}
 function propsToObject(obj) {
   const result = {};
   if (obj.properties) {
@@ -254,11 +225,6 @@ const DIRECTION_OFFSETS = {
   right: { x: 1, y: 0 },
 };
 
-// Punto de aparición: centro de la puerta destino + 1 tile en su "direction"
-// Punto de aparición: pegado al BORDE de la puerta destino (no al centro),
-// desplazado 1 tile hacia afuera en su "direction". Usar el borde (no el
-// centro) evita que el punto quede muy cerca de la puerta si esta es
-// grande, sin importar su ancho/alto.
 function getDoorSpawnPoint(door) {
   const props = propsToObject(door);
   const dir = DIRECTION_OFFSETS[props.direction] || { x: 0, y: 1 };
@@ -276,9 +242,8 @@ function getDoorSpawnPoint(door) {
   return { x: spawnX, y: spawnY };
 }
 
-// --- Estado de la transición (pantalla negra 0.5s, sin poder moverse) ---
-let doorTransition = null; // { player, timer, duration, targetX, targetY, teleported, arrivalDoor }
-let lastUsedDoor = null;   // puerta destino recién usada; se ignora hasta que el jugador se aleje de ella
+let doorTransition = null;
+let lastUsedDoor = null;
 
 function isTransitioning() {
   return doorTransition !== null;
@@ -289,8 +254,6 @@ function startDoorTransition(player, targetX, targetY, arrivalDoor, duration = 5
   doorTransition = { player, timer: 0, duration, targetX, targetY, teleported: false, arrivalDoor };
 }
 
-// Llamar en cada frame (siempre, incluso durante la transición) para
-// avanzar el timer y hacer el teletransporte a mitad de camino.
 function updateDoorTransition(deltaTime) {
   if (!doorTransition) return;
   doorTransition.timer += deltaTime;
@@ -300,14 +263,13 @@ function updateDoorTransition(deltaTime) {
     doorTransition.player.x = doorTransition.targetX;
     doorTransition.player.y = doorTransition.targetY;
     doorTransition.teleported = true;
-    lastUsedDoor = doorTransition.arrivalDoor; // evita que se retriggeree sola apenas llegamos
+    lastUsedDoor = doorTransition.arrivalDoor;
   }
   if (doorTransition.timer >= doorTransition.duration) {
     doorTransition = null;
   }
 }
 
-// 0 = transparente, 1 = negro total. Sube los primeros 250ms, baja los últimos 250ms.
 function getTransitionAlpha() {
   if (!doorTransition) return 0;
   const half = doorTransition.duration / 2;
@@ -317,8 +279,6 @@ function getTransitionAlpha() {
   return 1 - (doorTransition.timer - half) / half;
 }
 
-// Dibuja el overlay negro de la transición. Llamar al final de tu draw(),
-// después de dibujar mapa y personaje.
 function drawTransitionOverlay(ctx, canvas) {
   const alpha = getTransitionAlpha();
   if (alpha <= 0) return;
@@ -329,18 +289,15 @@ function drawTransitionOverlay(ctx, canvas) {
   ctx.restore();
 }
 
-// Llamar en cada frame, después de mover al jugador. Si está tocando una
-// puerta, arranca la transición hacia la puerta destino (targetDoor).
 function checkDoors(player) {
-  if (isTransitioning()) return; // no reprocesar mientras ya está viajando
+  if (isTransitioning()) return;
 
-  // Si nos alejamos de la última puerta usada, ya se puede volver a activar
   if (lastUsedDoor && !rectsOverlap(player, lastUsedDoor)) {
     lastUsedDoor = null;
   }
 
   for (const door of doors) {
-    if (door === lastUsedDoor) continue; // evita retriggerear la puerta a la que acabamos de llegar
+    if (door === lastUsedDoor) continue;
     if (rectsOverlap(player, door)) {
       const props = propsToObject(door);
       const targetName = "ph" + props.targetDoor;
@@ -350,12 +307,125 @@ function checkDoors(player) {
         return;
       }
       const spawn = getDoorSpawnPoint(targetDoor);
-      // spawn es el punto donde queremos el CENTRO del jugador, así que
-      // restamos la mitad de su ancho/alto para ubicar su esquina (x,y)
       const finalX = spawn.x - player.width / 2;
       const finalY = spawn.y - player.height / 2;
       startDoorTransition(player, finalX, finalY, targetDoor);
       break;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------
+// 3d. BUTTONS (botones de puzzle) — 4 combinaciones de 2 botones en orden
+// ---------------------------------------------------------------------
+const buttonsLayer = mapData.layers.find(l => l.name === "Buttons");
+const buttons = buttonsLayer ? buttonsLayer.objects : [];
+
+// Estado de cada puzzle: { currentStep, totalSteps, activated, solved }
+const puzzleStates = {};
+
+// Set de botones que el jugador está pisando actualmente (para evitar re-procesar)
+let currentButtonsStepped = new Set();
+
+/**
+ * Obtiene el nombre único de un botón (usa 'name' si existe, sino genera uno)
+ */
+function getButtonName(button) {
+  return button.name || `btn_${button.id || Math.random()}`;
+}
+
+/**
+ * Verifica colisiones con botones y gestiona la lógica del puzzle
+ */
+function checkButtons(player) {
+  if (isTransitioning()) return;
+  
+  const touchedNow = new Set();
+  
+  // Detectar qué botones está pisando el jugador
+  for (const button of buttons) {
+    if (rectsOverlap(player, button)) {
+      touchedNow.add(getButtonName(button));
+    }
+  }
+  
+  // Procesar solo botones nuevos (no procesar si ya estaba encima)
+  for (const buttonName of touchedNow) {
+    if (currentButtonsStepped.has(buttonName)) continue;
+    
+    const button = buttons.find(b => getButtonName(b) === buttonName);
+    if (!button) continue;
+    
+    const props = propsToObject(button);
+    const puzzleId = props.puzzleId;
+    const order = parseInt(props.order);
+    
+    if (!puzzleId || !order) continue;
+    
+    // Inicializar estado del puzzle si no existe
+    if (!puzzleStates[puzzleId]) {
+      puzzleStates[puzzleId] = {
+        currentStep: 1,
+        totalSteps: 2,
+        activated: [],
+        solved: false,
+      };
+    }
+    
+    const state = puzzleStates[puzzleId];
+    if (state.solved) continue;
+    
+    // Verificar si es el siguiente botón en la secuencia
+    if (order === state.currentStep) {
+      state.activated.push(buttonName);
+      state.currentStep++;
+      
+      // Verificar si completó el puzzle
+      if (state.currentStep > state.totalSteps) {
+        state.solved = true;
+        console.log("✅ Puzzle resuelto:", puzzleId);
+        // Aquí puedes disparar eventos (abrir puertas, dar items, etc.)
+      }
+    } else {
+      // Orden incorrecto: resetear el puzzle
+      console.log("❌ Orden incorrecto, reseteando puzzle:", puzzleId);
+      state.activated = [];
+      state.currentStep = 1;
+    }
+  }
+  
+  currentButtonsStepped = touchedNow;
+}
+
+/**
+ * Dibuja el sprite "activado" encima de los botones pisados correctamente
+ */
+function drawButtonOverlays(ctx, canvas, camera) {
+  const activatedImagePath = TILE_FOLDER + TILESET_CONFIG["spr_groundswitch1_1.tsx"].image;
+  const activatedImage = loadedImages[activatedImagePath];
+  
+  if (!activatedImage || !activatedImage.complete || activatedImage.failed) return;
+  
+  for (const button of buttons) {
+    const props = propsToObject(button);
+    const puzzleId = props.puzzleId;
+    if (!puzzleId) continue;
+    
+    const state = puzzleStates[puzzleId];
+    if (!state) continue;
+    
+    const buttonName = getButtonName(button);
+    const isActivated = state.activated.includes(buttonName) || state.solved;
+    
+    // Si el botón está activado, dibujar el sprite "pisado" encima
+    if (isActivated) {
+      ctx.drawImage(
+        activatedImage,
+        button.x - camera.x,
+        button.y - camera.y,
+        button.width,
+        button.height
+      );
     }
   }
 }
@@ -386,16 +456,13 @@ function drawScene(ctx, canvas, player, camera) {
   const currentRoomName = getCurrentRoomName(player);
   const roomParts = currentRoomName ? getRoomPartsByName(currentRoomName) : [];
 
-  // Fondo negro (todo lo que no es la room actual queda tapado)
   ctx.fillStyle = "black";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   if (roomParts.length === 0) {
-    // Jugador fuera de cualquier room conocida: no dibujamos nada por ahora
     return;
   }
 
-  // Bounding box de todos los puntos (para no dejar salir la cámara del cuarto)
   const allPoints = roomParts.flat();
   const minX = Math.min(...allPoints.map(p => p.x));
   const minY = Math.min(...allPoints.map(p => p.y));
@@ -416,7 +483,6 @@ function drawScene(ctx, canvas, player, camera) {
   }
   ctx.clip();
 
-  // Dibuja capas en orden (de abajo hacia arriba)
   for (const name of TILE_LAYER_NAMES) {
     const tiles = decodedLayers[name];
     if (!tiles) continue;
@@ -429,7 +495,7 @@ function drawScene(ctx, canvas, player, camera) {
 }
 
 // ---------------------------------------------------------------------
-// 5. INICIALIZACIÓN — llamar esto una vez al arrancar el juego
+// 5. INICIALIZACIÓN
 // ---------------------------------------------------------------------
 async function initMapRender() {
   buildTilesetRanges();

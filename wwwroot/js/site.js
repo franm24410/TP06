@@ -13,7 +13,7 @@ let player = {
 let camera = { x: 0, y: 0 };
 
 // Velocidad del personaje
-let speed = 4;
+let speed = 5;
 
 let keys = {};
 let grupoActivo = null;
@@ -234,6 +234,7 @@ function update(deltaTime) {
     actualizarFrame(deltaTime, moviendose);
 
     checkDoors(player);
+    checkButtons(player);
 }
 
 
@@ -245,6 +246,9 @@ function draw() {
 
     // 1. Dibuja el mapa (solo la room actual) y actualiza la cámara
     drawScene(ctx, canvas, player, camera);
+
+    // 1b. Sprite "prendido" de los botones del puzzle, tapando el normal
+    drawButtonOverlays(ctx, canvas, camera);
 
     // 2. Dibuja el sprite del personaje, restando la cámara para que
     //    quede en su posición correcta relativa a lo que se ve en pantalla
