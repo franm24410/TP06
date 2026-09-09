@@ -13,6 +13,10 @@ namespace TP06.Models
     {
         public int IdUsuario { get; set; }
         public string NombreUsuario { get; set; } = string.Empty;
+        public string Contrasenia { get; set; } = string.Empty;
+        public string Nombre { get; set; }
+        public string Apellido { get; set; }
+        public string TipoUsuario { get; set; }
 
         /// <summary>
         /// Hash de la contraseña (nunca guardar la contraseña en texto plano).

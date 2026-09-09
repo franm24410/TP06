@@ -1,8 +1,6 @@
 ﻿const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-// player ahora es un objeto (world coords), porque mapRender.js
-// (getCurrentRoomName, checkDoors, drawScene) necesita player.x/y/width/height
 let player = {
     x: 1550,
     y: 740,
@@ -12,7 +10,6 @@ let player = {
 
 let camera = { x: 0, y: 0 };
 
-// Velocidad del personaje
 let speed = 5;
 
 let keys = {};
@@ -68,7 +65,6 @@ document.addEventListener("keyup", function(event) {
     }
 });
 
-
 // Sprites del personaje
 const spriteSources = {
     idle: [
@@ -100,7 +96,6 @@ const spriteSources = {
     ]
 };
 
-
 // Precarga de imágenes
 const sprites = {};
 
@@ -124,14 +119,12 @@ for (let direccion in spriteSources) {
     });
 }
 
-
 // Estado de la animación
 let direccionActual = "down";
 let frameActual = 0;
 let frameTimer = 0;
 
 const frameDuracion = 150;
-
 
 // Determina hacia dónde mira el personaje
 function actualizarDireccion() {
@@ -157,7 +150,6 @@ function actualizarDireccion() {
 
     const moviendose = dx !== 0 || dy !== 0;
 
-    // Prioridad horizontal cuando se mueve en diagonal
     if (dx < 0) {
         direccionActual = "left";
     }
@@ -173,7 +165,6 @@ function actualizarDireccion() {
 
     return moviendose;
 }
-
 
 // Actualiza la animación
 function actualizarFrame(deltaTime, moviendose) {
@@ -195,7 +186,6 @@ function actualizarFrame(deltaTime, moviendose) {
         frameActual = (frameActual + 1) % totalFrames;
     }
 }
-
 
 // Actualiza el juego
 function update(deltaTime) {
@@ -237,9 +227,7 @@ function update(deltaTime) {
     checkButtons(player);
 }
 
-
 // Dibujar
-
 function draw() {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -250,8 +238,7 @@ function draw() {
     // 1b. Sprite "prendido" de los botones del puzzle, tapando el normal
     drawButtonOverlays(ctx, canvas, camera);
 
-    // 2. Dibuja el sprite del personaje, restando la cámara para que
-    //    quede en su posición correcta relativa a lo que se ve en pantalla
+    // 2. Dibuja el sprite del personaje
     let spriteActual = sprites[direccionActual][frameActual];
 
     if (!spriteActual || !spriteActual.cargada) {
@@ -269,13 +256,9 @@ function draw() {
         );
     }
 
-    // 3. Overlay negro de la transición entre puertas (0.5s), encima de todo
+    // 3. Overlay negro de la transición entre puertas
     drawTransitionOverlay(ctx, canvas);
 }
-
-
-
-
 
 // Game loop
 let ultimoTimestamp = 0;

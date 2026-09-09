@@ -587,7 +587,6 @@ C:\Users\50235173\Downloads\TP06\obj\Debug\net9.0\refint\TP06.dll
 C:\Users\50235173\Downloads\TP06\obj\Debug\net9.0\TP06.pdb
 C:\Users\50235173\Downloads\TP06\obj\Debug\net9.0\TP06.genruntimeconfig.cache
 C:\Users\50235173\Downloads\TP06\obj\Debug\net9.0\ref\TP06.dll
-C:\Users\50235173\Downloads\TP06\obj\Debug\net9.0\compressed\qvgokuhdq9-1s6vs0lmvj.gz
 C:\Users\50235299\Downloads\TP06\bin\Debug\net9.0\appsettings.Development.json
 C:\Users\50235299\Downloads\TP06\bin\Debug\net9.0\appsettings.json
 C:\Users\50235299\Downloads\TP06\bin\Debug\net9.0\TP06.staticwebassets.runtime.json
@@ -731,6 +730,8 @@ C:\Users\50235173\Downloads\TP06\bin\Debug\net9.0\runtimes\win-x64\native\Micros
 C:\Users\50235173\Downloads\TP06\bin\Debug\net9.0\runtimes\win-x86\native\Microsoft.Data.SqlClient.SNI.dll
 C:\Users\50235173\Downloads\TP06\bin\Debug\net9.0\runtimes\win\lib\net9.0\System.Diagnostics.EventLog.dll
 C:\Users\50235173\Downloads\TP06\bin\Debug\net9.0\runtimes\win\lib\net9.0\System.Security.Cryptography.Pkcs.dll
-C:\Users\50235173\Downloads\TP06\obj\Debug\net9.0\compressed\myogmasy63-7ptxw5ao9z.gz
-C:\Users\50235173\Downloads\TP06\obj\Debug\net9.0\compressed\rbbbvra5nl-r08wjqd8q9.gz
 C:\Users\50235173\Downloads\TP06\obj\Debug\net9.0\TP06.csproj.Up2Date
+C:\Users\50235173\Downloads\TP06\obj\Debug\net9.0\compressed\qvgokuhdq9-kktrk9ul2o.gz
+C:\Users\50235173\Downloads\TP06\obj\Debug\net9.0\compressed\myogmasy63-x6wh3ru1w0.gz
+C:\Users\50235173\Downloads\TP06\obj\Debug\net9.0\compressed\50u4j4v7b2-qezjx3tiz3.gz
+C:\Users\50235173\Downloads\TP06\obj\Debug\net9.0\compressed\a611eqhcud-eectrel3gb.gz

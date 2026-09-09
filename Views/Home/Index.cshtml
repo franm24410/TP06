@@ -30,8 +30,9 @@
 
 <body>
     <canvas id="game" width="640" height="480"></canvas>
-
-    <script src="~/Tiles/MAPATERMINADOAHORASI.js"></script>
+    <script>
+        window.MAP_URL = '@Url.Content("~/Tiles/MAPATERMINADOAHORASI.json")';
+    </script>
     <script src="~/js/MapRender.js"></script>
     <script src="~/js/site.js"></script>
 </body>

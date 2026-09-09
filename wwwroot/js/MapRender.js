@@ -1,10 +1,13 @@
 // mapRender.js
-// Carga el mapa exportado de Tiled (TileMaps.MAPATERMINADOAHORASI) y lo dibuja
-// en el canvas, mostrando solo la habitación (room) donde está el jugador.
+// Carga el mapa exportado de Tiled (formato JSON, extensión .json) con fetch
+// y lo dibuja en el canvas, mostrando solo la habitación (room) donde está el jugador.
 
-const mapData = TileMaps["MAPATERMINADOAHORASI"];
-const TILE_W = mapData.tilewidth;   // 20
-const TILE_H = mapData.tileheight;  // 20
+// URL del mapa .json (se puede sobrescribir desde la vista con window.MAP_URL)
+const MAP_URL = window.MAP_URL || "/Tiles/MAPATERMINADOAHORASI.json";
+
+let mapData = null;
+let TILE_W = 20;
+let TILE_H = 20;
 
 // ---------------------------------------------------------------------
 // 1. CONFIGURACIÓN DE TILESETS
@@ -44,16 +47,20 @@ function buildTilesetRanges() {
     const ts = list[i];
     const nextFirstgid = list[i + 1] ? list[i + 1].firstgid : Infinity;
 
+    // Caso 1: tileset embebido (trae "image" directo, sin tabla externa)
     if (ts.image) {
       tilesetRanges.push({
         firstgid: ts.firstgid,
         lastgid: nextFirstgid - 1,
         columns: ts.columns,
         image: TILE_FOLDER + getFileName(ts.image),
+        margin: ts.margin || 0,
+        spacing: ts.spacing || 0,
       });
       continue;
     }
 
+    // Caso 2: tileset externo (.tsx) -> matcheamos por nombre de archivo
     const fileName = getFileName(ts.source);
     const config = fileName ? TILESET_CONFIG[fileName] : null;
     if (!config) {
@@ -65,21 +72,31 @@ function buildTilesetRanges() {
       lastgid: nextFirstgid - 1,
       columns: config.columns,
       image: TILE_FOLDER + config.image,
+      margin: 0,
+      spacing: 0,
     });
   }
 }
 
 function loadImages() {
   const promises = [];
-  for (const range of tilesetRanges) {
-    if (loadedImages[range.image]) continue;
+  const imagesToLoad = new Set(tilesetRanges.map(r => r.image));
+
+  // Asegurar que el sprite de botón activado esté cargado
+  const buttonOnConfig = TILESET_CONFIG["spr_groundswitch1_1.tsx"];
+  if (buttonOnConfig && buttonOnConfig.image) {
+    imagesToLoad.add(TILE_FOLDER + buttonOnConfig.image);
+  }
+
+  for (const imagePath of imagesToLoad) {
+    if (loadedImages[imagePath]) continue;
     const img = new Image();
     const p = new Promise((resolve) => {
       img.onload = resolve;
-      img.onerror = () => { console.error("No se pudo cargar imagen:", range.image); img.failed = true; resolve(); };
+      img.onerror = () => { console.error("No se pudo cargar imagen:", imagePath); img.failed = true; resolve(); };
     });
-    img.src = range.image;
-    loadedImages[range.image] = img;
+    img.src = imagePath;
+    loadedImages[imagePath] = img;
     promises.push(p);
   }
   return Promise.all(promises);
@@ -130,10 +147,29 @@ function decodeAllLayers() {
 }
 
 // ---------------------------------------------------------------------
+// HELPERS
+// ---------------------------------------------------------------------
+function propsToObject(obj) {
+  const result = {};
+  if (obj.properties) {
+    for (const p of obj.properties) result[p.name] = p.value;
+  }
+  return result;
+}
+
+function rectsOverlap(a, b) {
+  return (
+    a.x < b.x + b.width &&
+    a.x + a.width > b.x &&
+    a.y < b.y + b.height &&
+    a.y + a.height > b.y
+  );
+}
+
+// ---------------------------------------------------------------------
 // 3. ROOMS
 // ---------------------------------------------------------------------
-const roomsLayer = mapData.layers.find(l => l.name === "Rooms");
-const rooms = roomsLayer ? roomsLayer.objects : [];
+let rooms = [];
 
 function getAbsolutePoints(obj) {
   if (obj.polygon) {
@@ -174,8 +210,7 @@ function getRoomPartsByName(name) {
 // ---------------------------------------------------------------------
 // 3c. COLISIÓN DE PAREDES
 // ---------------------------------------------------------------------
-const wallsLayer = mapData.layers.find(l => l.name === "Interactuable");
-const wallObjects = wallsLayer ? wallsLayer.objects : [];
+let wallObjects = [];
 
 function rectHitsWall(rect) {
   return wallObjects.some(obj => rectsOverlap(rect, obj));
@@ -195,28 +230,8 @@ function moveWithWallCollision(player, dx, dy) {
 // ---------------------------------------------------------------------
 // 3b. DOORS (puertas)
 // ---------------------------------------------------------------------
-const doorsLayer = mapData.layers.find(l => l.name === "Doors");
-const doors = doorsLayer ? doorsLayer.objects : [];
-
-const doorsByName = {};
-for (const d of doors) doorsByName[d.name] = d;
-
-function propsToObject(obj) {
-  const result = {};
-  if (obj.properties) {
-    for (const p of obj.properties) result[p.name] = p.value;
-  }
-  return result;
-}
-
-function rectsOverlap(a, b) {
-  return (
-    a.x < b.x + b.width &&
-    a.x + a.width > b.x &&
-    a.y < b.y + b.height &&
-    a.y + a.height > b.y
-  );
-}
+let doors = [];
+let doorsByName = {};
 
 const DIRECTION_OFFSETS = {
   up:    { x: 0, y: -1 },
@@ -316,117 +331,168 @@ function checkDoors(player) {
 }
 
 // ---------------------------------------------------------------------
-// 3d. BUTTONS (botones de puzzle) — 4 combinaciones de 2 botones en orden
+// 3d. PUZZLE DE BOTONES (TB1..TB12)
 // ---------------------------------------------------------------------
-const buttonsLayer = mapData.layers.find(l => l.name === "Buttons");
-const buttons = buttonsLayer ? buttonsLayer.objects : [];
+// Estas variables se llenan DESPUÉS de cargar el .json, no al cargar el script.
+let buttons = [];
+let buttonsByName = {};
 
-// Estado de cada puzzle: { currentStep, totalSteps, activated, solved }
-const puzzleStates = {};
+// Defaults por si puzzleConfig.js no se cargó
+const PUZZLE_CAPA_BOTONES_DEFAULT = "Interactuable-Piso";
+const PUZZLE_SECUENCIAS_DEFAULT = [[1, 3], [5, 7], [2, 9], [8, 12]];
+const PUZZLE_TIEMPO_LIMITE_DEFAULT = 5000;
+const PUZZLE_URL_GUARDAR_DEFAULT = "/Puzzle/Complete";
 
-// Set de botones que el jugador está pisando actualmente (para evitar re-procesar)
-let currentButtonsStepped = new Set();
-
-/**
- * Obtiene el nombre único de un botón (usa 'name' si existe, sino genera uno)
- */
-function getButtonName(button) {
-  return button.name || `btn_${button.id || Math.random()}`;
+function getPuzzleCapa() {
+  return (typeof PUZZLE_CAPA_BOTONES !== "undefined") ? PUZZLE_CAPA_BOTONES : PUZZLE_CAPA_BOTONES_DEFAULT;
+}
+function getPuzzleSecuencias() {
+  return (typeof PUZZLE_SECUENCIAS !== "undefined") ? PUZZLE_SECUENCIAS : PUZZLE_SECUENCIAS_DEFAULT;
+}
+function getPuzzleTiempoLimite() {
+  return (typeof PUZZLE_TIEMPO_LIMITE !== "undefined") ? PUZZLE_TIEMPO_LIMITE : PUZZLE_TIEMPO_LIMITE_DEFAULT;
+}
+function getPuzzleUrlGuardar() {
+  return (typeof PUZZLE_URL_GUARDAR !== "undefined") ? PUZZLE_URL_GUARDAR : PUZZLE_URL_GUARDAR_DEFAULT;
 }
 
-/**
- * Verifica colisiones con botones y gestiona la lógica del puzzle
- */
-function checkButtons(player) {
-  if (isTransitioning()) return;
-  
-  const touchedNow = new Set();
-  
-  // Detectar qué botones está pisando el jugador
-  for (const button of buttons) {
-    if (rectsOverlap(player, button)) {
-      touchedNow.add(getButtonName(button));
+// Imagen del sprite "prendido"
+let buttonOnImage = null;
+
+// Estado del puzzle
+let puzzleRondaActual = 0;
+let puzzleEsperandoSegundo = false;
+let puzzleCompletado = false;
+let puzzleBotonesActivos = {};
+
+function activateButton(nombreBoton) {
+  puzzleBotonesActivos[nombreBoton] = Date.now() + getPuzzleTiempoLimite();
+  console.log(`🔵 Botón ${nombreBoton} activado`);
+}
+
+function isButtonActive(nombreBoton) {
+  const expira = puzzleBotonesActivos[nombreBoton];
+  if (!expira) return false;
+  return Date.now() < expira;
+}
+
+function resetPuzzle() {
+  puzzleRondaActual = 0;
+  puzzleEsperandoSegundo = false;
+  puzzleBotonesActivos = {};
+  console.log("🔴 Puzzle reiniciado");
+}
+
+function cleanupExpiredButtons() {
+  const ahora = Date.now();
+  const secuencias = getPuzzleSecuencias();
+  for (const nombre in puzzleBotonesActivos) {
+    if (ahora >= puzzleBotonesActivos[nombre]) {
+      delete puzzleBotonesActivos[nombre];
+
+      if (puzzleEsperandoSegundo) {
+        const secuencia = secuencias[puzzleRondaActual];
+        if (secuencia) {
+          const nombrePrimerBoton = "TB" + secuencia[0];
+          if (nombre === nombrePrimerBoton) {
+            console.log("⏰ Tiempo agotado, reiniciando puzzle");
+            resetPuzzle();
+          }
+        }
+      }
     }
   }
-  
-  // Procesar solo botones nuevos (no procesar si ya estaba encima)
-  for (const buttonName of touchedNow) {
-    if (currentButtonsStepped.has(buttonName)) continue;
-    
-    const button = buttons.find(b => getButtonName(b) === buttonName);
-    if (!button) continue;
-    
-    const props = propsToObject(button);
-    const puzzleId = props.puzzleId;
-    const order = parseInt(props.order);
-    
-    if (!puzzleId || !order) continue;
-    
-    // Inicializar estado del puzzle si no existe
-    if (!puzzleStates[puzzleId]) {
-      puzzleStates[puzzleId] = {
-        currentStep: 1,
-        totalSteps: 2,
-        activated: [],
-        solved: false,
-      };
-    }
-    
-    const state = puzzleStates[puzzleId];
-    if (state.solved) continue;
-    
-    // Verificar si es el siguiente botón en la secuencia
-    if (order === state.currentStep) {
-      state.activated.push(buttonName);
-      state.currentStep++;
-      
-      // Verificar si completó el puzzle
-      if (state.currentStep > state.totalSteps) {
-        state.solved = true;
-        console.log("✅ Puzzle resuelto:", puzzleId);
-        // Aquí puedes disparar eventos (abrir puertas, dar items, etc.)
+}
+
+function checkButtons(player) {
+  if (isTransitioning() || puzzleCompletado) return;
+
+  cleanupExpiredButtons();
+
+  const secuencias = getPuzzleSecuencias();
+
+  for (const button of buttons) {
+    if (!rectsOverlap(player, button)) continue;
+
+    const nombreBoton = button.name;
+    const numeroBoton = parseInt(nombreBoton.replace("TB", ""));
+    if (isNaN(numeroBoton)) continue;
+
+    const secuencia = secuencias[puzzleRondaActual];
+    if (!secuencia) continue;
+
+    const esperadoPrimero = secuencia[0];
+    const esperadoSegundo = secuencia[1];
+
+    if (!puzzleEsperandoSegundo) {
+      if (numeroBoton === esperadoPrimero) {
+        activateButton(nombreBoton);
+        puzzleEsperandoSegundo = true;
+        console.log(`✅ Ronda ${puzzleRondaActual + 1}: primer botón correcto (${nombreBoton})`);
+      } else if (isButtonActive(nombreBoton)) {
+        // ya está prendido, ignorar
+      } else {
+        console.log(`❌ Botón incorrecto (esperaba TB${esperadoPrimero}, tocaste ${nombreBoton})`);
+        resetPuzzle();
       }
     } else {
-      // Orden incorrecto: resetear el puzzle
-      console.log("❌ Orden incorrecto, reseteando puzzle:", puzzleId);
-      state.activated = [];
-      state.currentStep = 1;
+      if (numeroBoton === esperadoSegundo) {
+        const nombrePrimerBoton = "TB" + esperadoPrimero;
+        if (isButtonActive(nombrePrimerBoton)) {
+          activateButton(nombreBoton);
+          puzzleEsperandoSegundo = false;
+          puzzleRondaActual++;
+          console.log(`✅ Ronda ${puzzleRondaActual} completada`);
+
+          if (puzzleRondaActual >= secuencias.length) {
+            puzzleCompletado = true;
+            console.log("🎉 ¡PUZZLE COMPLETADO!");
+            guardarPuzzleEnBD();
+          }
+        } else {
+          console.log("⏰ El primer botón se apagó, reiniciando");
+          resetPuzzle();
+        }
+      } else if (numeroBoton === esperadoPrimero) {
+        // Volvió a pisar el primer botón, ignorar
+      } else {
+        console.log(`❌ Botón incorrecto (esperaba TB${esperadoSegundo}, tocaste ${nombreBoton})`);
+        resetPuzzle();
+      }
     }
+
+    break; // Solo procesar un botón por frame
   }
-  
-  currentButtonsStepped = touchedNow;
 }
 
-/**
- * Dibuja el sprite "activado" encima de los botones pisados correctamente
- */
+function guardarPuzzleEnBD() {
+  fetch(getPuzzleUrlGuardar(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" }
+  })
+  .then(res => res.json())
+  .then(data => {
+    console.log("💾 Puzzle guardado en BD:", data);
+  })
+  .catch(err => {
+    console.error("❌ Error guardando puzzle:", err);
+  });
+}
+
 function drawButtonOverlays(ctx, canvas, camera) {
-  const activatedImagePath = TILE_FOLDER + TILESET_CONFIG["spr_groundswitch1_1.tsx"].image;
-  const activatedImage = loadedImages[activatedImagePath];
-  
-  if (!activatedImage || !activatedImage.complete || activatedImage.failed) return;
-  
-  for (const button of buttons) {
-    const props = propsToObject(button);
-    const puzzleId = props.puzzleId;
-    if (!puzzleId) continue;
-    
-    const state = puzzleStates[puzzleId];
-    if (!state) continue;
-    
-    const buttonName = getButtonName(button);
-    const isActivated = state.activated.includes(buttonName) || state.solved;
-    
-    // Si el botón está activado, dibujar el sprite "pisado" encima
-    if (isActivated) {
-      ctx.drawImage(
-        activatedImage,
-        button.x - camera.x,
-        button.y - camera.y,
-        button.width,
-        button.height
-      );
-    }
+  if (!buttonOnImage || !buttonOnImage.complete || buttonOnImage.failed) return;
+
+  for (const nombre in puzzleBotonesActivos) {
+    const button = buttonsByName[nombre];
+    if (!button) continue;
+
+    ctx.drawImage(
+      buttonOnImage,
+      Math.round(button.x - camera.x),
+      Math.round(button.y - camera.y),
+      button.width || TILE_W,
+      button.height || TILE_H
+    );
   }
 }
 
@@ -459,9 +525,7 @@ function drawScene(ctx, canvas, player, camera) {
   ctx.fillStyle = "black";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  if (roomParts.length === 0) {
-    return;
-  }
+  if (roomParts.length === 0) return;
 
   const allPoints = roomParts.flat();
   const minX = Math.min(...allPoints.map(p => p.x));
@@ -495,9 +559,55 @@ function drawScene(ctx, canvas, player, camera) {
 }
 
 // ---------------------------------------------------------------------
-// 5. INICIALIZACIÓN
+// 5. CARGA DEL MAPA .json
+// ---------------------------------------------------------------------
+async function loadMapData() {
+  const res = await fetch(MAP_URL, { cache: "no-store" });
+
+  if (!res.ok) {
+    throw new Error(`No se pudo cargar el mapa: HTTP ${res.status} - ${MAP_URL}`);
+  }
+
+  mapData = await res.json();
+
+  TILE_W = mapData.tilewidth || 20;
+  TILE_H = mapData.tileheight || 20;
+}
+
+function initMapObjects() {
+  const roomsLayer = mapData.layers.find(l => l.name === "Rooms");
+  rooms = roomsLayer ? roomsLayer.objects : [];
+
+  const wallsLayer = mapData.layers.find(l => l.name === "Interactuable");
+  wallObjects = wallsLayer ? wallsLayer.objects : [];
+
+  const doorsLayer = mapData.layers.find(l => l.name === "Doors");
+  doors = doorsLayer ? doorsLayer.objects : [];
+  doorsByName = {};
+  for (const d of doors) doorsByName[d.name] = d;
+
+  const nombreCapaBotones = getPuzzleCapa();
+  const buttonsLayer = mapData.layers.find(l => l.name === nombreCapaBotones);
+  buttons = buttonsLayer ? buttonsLayer.objects : [];
+  buttonsByName = {};
+  for (const b of buttons) {
+    if (b.name) buttonsByName[b.name] = b;
+  }
+
+  // Imagen del sprite "prendido" para los botones
+  const buttonOnConfig = TILESET_CONFIG["spr_groundswitch1_1.tsx"];
+  if (buttonOnConfig && buttonOnConfig.image) {
+    buttonOnImage = new Image();
+    buttonOnImage.src = TILE_FOLDER + buttonOnConfig.image;
+  }
+}
+
+// ---------------------------------------------------------------------
+// 6. INICIALIZACIÓN
 // ---------------------------------------------------------------------
 async function initMapRender() {
+  await loadMapData();
+  initMapObjects();
   buildTilesetRanges();
   decodeAllLayers();
   await loadImages();
