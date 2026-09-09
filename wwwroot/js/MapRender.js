@@ -360,22 +360,25 @@ function getPuzzleUrlGuardar() {
 let buttonOnImage = null;
 
 // Estado del puzzle
-let puzzleRondaActual = 0;
-let puzzleEsperandoSegundo = false;
-let puzzleCompletado = false;
-let puzzleBotonesActivos = {};
+let puzzleRondaActual = 0;           // 0 a 3 (índice de PUZZLE_SECUENCIAS)
+let puzzleEsperandoSegundo = false;  // true si ya tocó el primer botón de la ronda
+let puzzleCompletado = false;        // true si completó las 4 rondas
+let puzzleBotonesActivos = {};       // { "TB1": timestampCuandoExpira, ... }
 
+// Activa un botón: lo "prende" (sprite cambiado) por 5 segundos.
+// Se llama con CUALQUIER botón pisado, no solo los de la secuencia.
 function activateButton(nombreBoton) {
   puzzleBotonesActivos[nombreBoton] = Date.now() + getPuzzleTiempoLimite();
-  console.log(`🔵 Botón ${nombreBoton} activado`);
 }
 
+// Verifica si un botón sigue activo
 function isButtonActive(nombreBoton) {
   const expira = puzzleBotonesActivos[nombreBoton];
   if (!expira) return false;
   return Date.now() < expira;
 }
 
+// Reinicia todo el puzzle desde la ronda 1
 function resetPuzzle() {
   puzzleRondaActual = 0;
   puzzleEsperandoSegundo = false;
@@ -383,13 +386,16 @@ function resetPuzzle() {
   console.log("🔴 Puzzle reiniciado");
 }
 
+// Limpia botones expirados
 function cleanupExpiredButtons() {
   const ahora = Date.now();
   const secuencias = getPuzzleSecuencias();
+
   for (const nombre in puzzleBotonesActivos) {
     if (ahora >= puzzleBotonesActivos[nombre]) {
       delete puzzleBotonesActivos[nombre];
 
+      // Si se apagó el primer botón y estábamos esperando el segundo, reiniciar
       if (puzzleEsperandoSegundo) {
         const secuencia = secuencias[puzzleRondaActual];
         if (secuencia) {
@@ -404,8 +410,9 @@ function cleanupExpiredButtons() {
   }
 }
 
+// Lógica principal: procesar cuando el jugador pisa un botón
 function checkButtons(player) {
-  if (isTransitioning() || puzzleCompletado) return;
+  if (isTransitioning()) return;
 
   cleanupExpiredButtons();
 
@@ -414,57 +421,63 @@ function checkButtons(player) {
   for (const button of buttons) {
     if (!rectsOverlap(player, button)) continue;
 
-    const nombreBoton = button.name;
+    const nombreBoton = button.name; // "TB1", "TB2", etc.
     const numeroBoton = parseInt(nombreBoton.replace("TB", ""));
     if (isNaN(numeroBoton)) continue;
 
-    const secuencia = secuencias[puzzleRondaActual];
-    if (!secuencia) continue;
+    // --- Lógica de secuencia (solo si el puzzle no está completado) ---
+    if (!puzzleCompletado) {
+      const secuencia = secuencias[puzzleRondaActual];
 
-    const esperadoPrimero = secuencia[0];
-    const esperadoSegundo = secuencia[1];
+      if (secuencia) {
+        const esperadoPrimero = secuencia[0];
+        const esperadoSegundo = secuencia[1];
 
-    if (!puzzleEsperandoSegundo) {
-      if (numeroBoton === esperadoPrimero) {
-        activateButton(nombreBoton);
-        puzzleEsperandoSegundo = true;
-        console.log(`✅ Ronda ${puzzleRondaActual + 1}: primer botón correcto (${nombreBoton})`);
-      } else if (isButtonActive(nombreBoton)) {
-        // ya está prendido, ignorar
-      } else {
-        console.log(`❌ Botón incorrecto (esperaba TB${esperadoPrimero}, tocaste ${nombreBoton})`);
-        resetPuzzle();
-      }
-    } else {
-      if (numeroBoton === esperadoSegundo) {
-        const nombrePrimerBoton = "TB" + esperadoPrimero;
-        if (isButtonActive(nombrePrimerBoton)) {
-          activateButton(nombreBoton);
-          puzzleEsperandoSegundo = false;
-          puzzleRondaActual++;
-          console.log(`✅ Ronda ${puzzleRondaActual} completada`);
-
-          if (puzzleRondaActual >= secuencias.length) {
-            puzzleCompletado = true;
-            console.log("🎉 ¡PUZZLE COMPLETADO!");
-            guardarPuzzleEnBD();
+        if (!puzzleEsperandoSegundo) {
+          // Estamos esperando el PRIMER botón de la ronda
+          if (numeroBoton === esperadoPrimero) {
+            puzzleEsperandoSegundo = true;
+            console.log(`✅ Ronda ${puzzleRondaActual + 1}: primer botón correcto (${nombreBoton})`);
+          } else {
+            console.log(`❌ Botón incorrecto (esperaba TB${esperadoPrimero}, tocaste ${nombreBoton})`);
+            resetPuzzle();
           }
         } else {
-          console.log("⏰ El primer botón se apagó, reiniciando");
-          resetPuzzle();
+          // Estamos esperando el SEGUNDO botón de la ronda
+          if (numeroBoton === esperadoSegundo) {
+            const nombrePrimerBoton = "TB" + esperadoPrimero;
+
+            if (isButtonActive(nombrePrimerBoton)) {
+              puzzleEsperandoSegundo = false;
+              puzzleRondaActual++;
+              console.log(`✅ Ronda ${puzzleRondaActual} completada`);
+
+              if (puzzleRondaActual >= secuencias.length) {
+                puzzleCompletado = true;
+                console.log("🎉 ¡PUZZLE COMPLETADO!");
+                guardarPuzzleEnBD();
+              }
+            } else {
+              console.log("⏰ El primer botón se apagó, reiniciando");
+              resetPuzzle();
+            }
+          } else if (numeroBoton !== esperadoPrimero) {
+            console.log(`❌ Botón incorrecto (esperaba TB${esperadoSegundo}, tocaste ${nombreBoton})`);
+            resetPuzzle();
+          }
         }
-      } else if (numeroBoton === esperadoPrimero) {
-        // Volvió a pisar el primer botón, ignorar
-      } else {
-        console.log(`❌ Botón incorrecto (esperaba TB${esperadoSegundo}, tocaste ${nombreBoton})`);
-        resetPuzzle();
       }
     }
+
+    // 🔵 Feedback visual SIEMPRE: cualquier botón pisado se prende por 5s,
+    // sea o no parte de la secuencia (y aunque el puzzle ya esté completado).
+    activateButton(nombreBoton);
 
     break; // Solo procesar un botón por frame
   }
 }
 
+// Guardar en la base de datos
 function guardarPuzzleEnBD() {
   fetch(getPuzzleUrlGuardar(), {
     method: "POST",
@@ -479,19 +492,29 @@ function guardarPuzzleEnBD() {
   });
 }
 
+// Dibujar el sprite "prendido" encima de los botones activos, CENTRADO en la hitbox
 function drawButtonOverlays(ctx, canvas, camera) {
   if (!buttonOnImage || !buttonOnImage.complete || buttonOnImage.failed) return;
+
+  // El dibujo del botón está CENTRADO dentro del PNG (con margen transparente
+  // alrededor). Por eso dibujamos el PNG entero centrado en el centro de la
+  // hitbox: así el botón prendido cae exactamente encima del apagado.
+  const w = buttonOnImage.naturalWidth || TILE_W;
+  const h = buttonOnImage.naturalHeight || TILE_H;
 
   for (const nombre in puzzleBotonesActivos) {
     const button = buttonsByName[nombre];
     if (!button) continue;
 
+    const centerX = button.x + (button.width || TILE_W) / 2;
+    const centerY = button.y + (button.height || TILE_H) / 2;
+
     ctx.drawImage(
       buttonOnImage,
-      Math.round(button.x - camera.x),
-      Math.round(button.y - camera.y),
-      button.width || TILE_W,
-      button.height || TILE_H
+      Math.round(centerX - w / 2 - camera.x),
+      Math.round(centerY - h / 2 - camera.y),
+      w,
+      h
     );
   }
 }
@@ -522,11 +545,13 @@ function drawScene(ctx, canvas, player, camera) {
   const currentRoomName = getCurrentRoomName(player);
   const roomParts = currentRoomName ? getRoomPartsByName(currentRoomName) : [];
 
+  // Fondo negro (todo lo que no es la room actual queda tapado)
   ctx.fillStyle = "black";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   if (roomParts.length === 0) return;
 
+  // Bounding box de todos los puntos (para no dejar salir la cámara del cuarto)
   const allPoints = roomParts.flat();
   const minX = Math.min(...allPoints.map(p => p.x));
   const minY = Math.min(...allPoints.map(p => p.y));
@@ -547,6 +572,7 @@ function drawScene(ctx, canvas, player, camera) {
   }
   ctx.clip();
 
+  // Dibuja capas en orden (de abajo hacia arriba)
   for (const name of TILE_LAYER_NAMES) {
     const tiles = decodedLayers[name];
     if (!tiles) continue;
