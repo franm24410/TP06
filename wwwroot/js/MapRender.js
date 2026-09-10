@@ -3,7 +3,7 @@
 // y lo dibuja en el canvas, mostrando solo la habitación (room) donde está el jugador.
 
 // URL del mapa .json (se puede sobrescribir desde la vista con window.MAP_URL)
-const MAP_URL = window.MAP_URL || "/Tiles/MAPATERMINADOAHORASI.json";
+const MAP_URL = window.MAP_URL || "/Tiles/MAPATERMINADOAHORASI.tmj";
 
 let mapData = null;
 let TILE_W = 20;
@@ -275,6 +275,8 @@ function updateDoorTransition(deltaTime) {
   const half = doorTransition.duration / 2;
 
   if (!doorTransition.teleported && doorTransition.timer >= half) {
+    doorTransition.player.x = Math.round(doorTransition.targetX);
+    doorTransition.player.y = Math.round(doorTransition.targetY); 
     doorTransition.player.x = doorTransition.targetX;
     doorTransition.player.y = doorTransition.targetY;
     doorTransition.teleported = true;
@@ -560,6 +562,8 @@ function drawScene(ctx, canvas, player, camera) {
 
   camera.x = Math.max(minX, Math.min(player.x - canvas.width / 2, Math.max(minX, maxX - canvas.width)));
   camera.y = Math.max(minY, Math.min(player.y - canvas.height / 2, Math.max(minY, maxY - canvas.height)));
+  camera.x = Math.round(camera.x);
+  camera.y = Math.round(camera.y);
 
   ctx.save();
   ctx.beginPath();
