@@ -1,8 +1,8 @@
 // mapRender.js
-// Carga el mapa exportado de Tiled (formato JSON, extensión .json) con fetch
+// Carga el mapa exportado de Tiled (formato JSON, extensión .tmj) con fetch
 // y lo dibuja en el canvas, mostrando solo la habitación (room) donde está el jugador.
 
-// URL del mapa .json (se puede sobrescribir desde la vista con window.MAP_URL)
+// URL del mapa .tmj (se puede sobrescribir desde la vista con window.MAP_URL)
 const MAP_URL = window.MAP_URL || "/Tiles/MAPATERMINADOAHORASI.tmj";
 
 let mapData = null;
@@ -276,9 +276,7 @@ function updateDoorTransition(deltaTime) {
 
   if (!doorTransition.teleported && doorTransition.timer >= half) {
     doorTransition.player.x = Math.round(doorTransition.targetX);
-    doorTransition.player.y = Math.round(doorTransition.targetY); 
-    doorTransition.player.x = doorTransition.targetX;
-    doorTransition.player.y = doorTransition.targetY;
+    doorTransition.player.y = Math.round(doorTransition.targetY);
     doorTransition.teleported = true;
     lastUsedDoor = doorTransition.arrivalDoor;
   }
@@ -335,11 +333,9 @@ function checkDoors(player) {
 // ---------------------------------------------------------------------
 // 3d. PUZZLE DE BOTONES (TB1..TB12)
 // ---------------------------------------------------------------------
-// Estas variables se llenan DESPUÉS de cargar el .json, no al cargar el script.
 let buttons = [];
 let buttonsByName = {};
 
-// Defaults por si puzzleConfig.js no se cargó
 const PUZZLE_CAPA_BOTONES_DEFAULT = "Interactuable-Piso";
 const PUZZLE_SECUENCIAS_DEFAULT = [[1, 3], [5, 7], [2, 9], [8, 12]];
 const PUZZLE_TIEMPO_LIMITE_DEFAULT = 5000;
@@ -358,29 +354,23 @@ function getPuzzleUrlGuardar() {
   return (typeof PUZZLE_URL_GUARDAR !== "undefined") ? PUZZLE_URL_GUARDAR : PUZZLE_URL_GUARDAR_DEFAULT;
 }
 
-// Imagen del sprite "prendido"
 let buttonOnImage = null;
 
-// Estado del puzzle
-let puzzleRondaActual = 0;           // 0 a 3 (índice de PUZZLE_SECUENCIAS)
-let puzzleEsperandoSegundo = false;  // true si ya tocó el primer botón de la ronda
-let puzzleCompletado = false;        // true si completó las 4 rondas
-let puzzleBotonesActivos = {};       // { "TB1": timestampCuandoExpira, ... }
+let puzzleRondaActual = 0;
+let puzzleEsperandoSegundo = false;
+let puzzleCompletado = false;
+let puzzleBotonesActivos = {};
 
-// Activa un botón: lo "prende" (sprite cambiado) por 5 segundos.
-// Se llama con CUALQUIER botón pisado, no solo los de la secuencia.
 function activateButton(nombreBoton) {
   puzzleBotonesActivos[nombreBoton] = Date.now() + getPuzzleTiempoLimite();
 }
 
-// Verifica si un botón sigue activo
 function isButtonActive(nombreBoton) {
   const expira = puzzleBotonesActivos[nombreBoton];
   if (!expira) return false;
   return Date.now() < expira;
 }
 
-// Reinicia todo el puzzle desde la ronda 1
 function resetPuzzle() {
   puzzleRondaActual = 0;
   puzzleEsperandoSegundo = false;
@@ -388,7 +378,6 @@ function resetPuzzle() {
   console.log("🔴 Puzzle reiniciado");
 }
 
-// Limpia botones expirados
 function cleanupExpiredButtons() {
   const ahora = Date.now();
   const secuencias = getPuzzleSecuencias();
@@ -397,7 +386,6 @@ function cleanupExpiredButtons() {
     if (ahora >= puzzleBotonesActivos[nombre]) {
       delete puzzleBotonesActivos[nombre];
 
-      // Si se apagó el primer botón y estábamos esperando el segundo, reiniciar
       if (puzzleEsperandoSegundo) {
         const secuencia = secuencias[puzzleRondaActual];
         if (secuencia) {
@@ -412,7 +400,6 @@ function cleanupExpiredButtons() {
   }
 }
 
-// Lógica principal: procesar cuando el jugador pisa un botón
 function checkButtons(player) {
   if (isTransitioning()) return;
 
@@ -423,9 +410,14 @@ function checkButtons(player) {
   for (const button of buttons) {
     if (!rectsOverlap(player, button)) continue;
 
-    const nombreBoton = button.name; // "TB1", "TB2", etc.
+    const nombreBoton = button.name;
     const numeroBoton = parseInt(nombreBoton.replace("TB", ""));
     if (isNaN(numeroBoton)) continue;
+
+    // 🔒 BOTÓN BLOQUEADO: si está prendido (lo tocaste hace menos de 5s),
+    // se ignora por completo hasta que se apague. Así no se detecta
+    // "muchísimas veces" mientras estás parado encima.
+    if (isButtonActive(nombreBoton)) continue;
 
     // --- Lógica de secuencia (solo si el puzzle no está completado) ---
     if (!puzzleCompletado) {
@@ -436,7 +428,7 @@ function checkButtons(player) {
         const esperadoSegundo = secuencia[1];
 
         if (!puzzleEsperandoSegundo) {
-          // Estamos esperando el PRIMER botón de la ronda
+          // Esperando el PRIMER botón de la ronda
           if (numeroBoton === esperadoPrimero) {
             puzzleEsperandoSegundo = true;
             console.log(`✅ Ronda ${puzzleRondaActual + 1}: primer botón correcto (${nombreBoton})`);
@@ -445,7 +437,7 @@ function checkButtons(player) {
             resetPuzzle();
           }
         } else {
-          // Estamos esperando el SEGUNDO botón de la ronda
+          // Esperando el SEGUNDO botón de la ronda
           if (numeroBoton === esperadoSegundo) {
             const nombrePrimerBoton = "TB" + esperadoPrimero;
 
@@ -471,15 +463,13 @@ function checkButtons(player) {
       }
     }
 
-    // 🔵 Feedback visual SIEMPRE: cualquier botón pisado se prende por 5s,
-    // sea o no parte de la secuencia (y aunque el puzzle ya esté completado).
+    // Feedback visual: se prende por 5s (y queda bloqueado esos mismos 5s)
     activateButton(nombreBoton);
 
     break; // Solo procesar un botón por frame
   }
 }
 
-// Guardar en la base de datos
 function guardarPuzzleEnBD() {
   fetch(getPuzzleUrlGuardar(), {
     method: "POST",
@@ -494,13 +484,9 @@ function guardarPuzzleEnBD() {
   });
 }
 
-// Dibujar el sprite "prendido" encima de los botones activos, CENTRADO en la hitbox
 function drawButtonOverlays(ctx, canvas, camera) {
   if (!buttonOnImage || !buttonOnImage.complete || buttonOnImage.failed) return;
 
-  // El dibujo del botón está CENTRADO dentro del PNG (con margen transparente
-  // alrededor). Por eso dibujamos el PNG entero centrado en el centro de la
-  // hitbox: así el botón prendido cae exactamente encima del apagado.
   const w = buttonOnImage.naturalWidth || TILE_W;
   const h = buttonOnImage.naturalHeight || TILE_H;
 
@@ -522,6 +508,58 @@ function drawButtonOverlays(ctx, canvas, camera) {
 }
 
 // ---------------------------------------------------------------------
+// 3e. OBJETOS PIx — recorte de imagen debajo del objeto
+// ---------------------------------------------------------------------
+let piObjects = [];
+let piImage = null;
+
+function initPIObjects() {
+  piObjects = [];
+
+  // Busca en TODAS las capas de objetos los que se llamen PI1, PI2, ...
+  for (const layer of mapData.layers) {
+    if (layer.type !== "objectgroup") continue;
+    for (const obj of layer.objects || []) {
+      if (obj.name && /^PI\d+$/i.test(obj.name)) {
+        piObjects.push(obj);
+      }
+    }
+  }
+
+  const ruta = (typeof PI_IMAGEN !== "undefined" && PI_IMAGEN) ? PI_IMAGEN : null;
+  if (ruta) {
+    piImage = new Image();
+    piImage.onerror = () => {
+      console.error("No se pudo cargar PI_IMAGEN:", ruta);
+      piImage.failed = true;
+    };
+    piImage.src = ruta;
+  }
+}
+
+function drawPIOverlays(ctx, canvas, camera) {
+  if (!piImage || !piImage.complete || piImage.failed) return;
+
+  const recortes = (typeof PI_RECORTES !== "undefined") ? PI_RECORTES : {};
+  const dx0 = (typeof PI_DX !== "undefined") ? PI_DX : 0;
+  const dy0 = (typeof PI_DY !== "undefined") ? PI_DY : -6;
+
+  for (const obj of piObjects) {
+    const r = recortes[obj.name] || recortes["*"];
+    if (!r) continue;
+
+    const sx = r[0], sy = r[1], sw = r[2], sh = r[3];
+
+    // Centrado horizontalmente, pegado ABAJO de la hitbox del objeto
+    const destX = Math.round(obj.x + obj.width / 2 - sw / 2 + dx0 - camera.x);
+    const destY = Math.round(obj.y + obj.height + dy0 - camera.y);
+
+    // Solo se dibuja el cuadradito recortado, no la imagen entera
+    ctx.drawImage(piImage, sx, sy, sw, sh, destX, destY, sw, sh);
+  }
+}
+
+// ---------------------------------------------------------------------
 // 4. DIBUJADO
 // ---------------------------------------------------------------------
 function drawTile(ctx, gid, worldX, worldY, camera) {
@@ -538,8 +576,8 @@ function drawTile(ctx, gid, worldX, worldY, camera) {
   const sx = margin + col * (TILE_W + spacing);
   const sy = margin + row * (TILE_H + spacing);
 
-  const dx = worldX * TILE_W - camera.x;
-  const dy = worldY * TILE_H - camera.y;
+  const dx = Math.round(worldX * TILE_W - camera.x);
+  const dy = Math.round(worldY * TILE_H - camera.y);
   ctx.drawImage(img, sx, sy, TILE_W, TILE_H, dx, dy, TILE_W, TILE_H);
 }
 
@@ -547,13 +585,11 @@ function drawScene(ctx, canvas, player, camera) {
   const currentRoomName = getCurrentRoomName(player);
   const roomParts = currentRoomName ? getRoomPartsByName(currentRoomName) : [];
 
-  // Fondo negro (todo lo que no es la room actual queda tapado)
   ctx.fillStyle = "black";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   if (roomParts.length === 0) return;
 
-  // Bounding box de todos los puntos (para no dejar salir la cámara del cuarto)
   const allPoints = roomParts.flat();
   const minX = Math.min(...allPoints.map(p => p.x));
   const minY = Math.min(...allPoints.map(p => p.y));
@@ -562,6 +598,8 @@ function drawScene(ctx, canvas, player, camera) {
 
   camera.x = Math.max(minX, Math.min(player.x - canvas.width / 2, Math.max(minX, maxX - canvas.width)));
   camera.y = Math.max(minY, Math.min(player.y - canvas.height / 2, Math.max(minY, maxY - canvas.height)));
+
+  // Cámara en píxeles enteros (evita líneas entre tiles)
   camera.x = Math.round(camera.x);
   camera.y = Math.round(camera.y);
 
@@ -576,7 +614,6 @@ function drawScene(ctx, canvas, player, camera) {
   }
   ctx.clip();
 
-  // Dibuja capas en orden (de abajo hacia arriba)
   for (const name of TILE_LAYER_NAMES) {
     const tiles = decodedLayers[name];
     if (!tiles) continue;
@@ -589,7 +626,7 @@ function drawScene(ctx, canvas, player, camera) {
 }
 
 // ---------------------------------------------------------------------
-// 5. CARGA DEL MAPA .json
+// 5. CARGA DEL MAPA .tmj
 // ---------------------------------------------------------------------
 async function loadMapData() {
   const res = await fetch(MAP_URL, { cache: "no-store" });
@@ -598,7 +635,17 @@ async function loadMapData() {
     throw new Error(`No se pudo cargar el mapa: HTTP ${res.status} - ${MAP_URL}`);
   }
 
-  mapData = await res.json();
+  const texto = (await res.text()).trim();
+
+  // Si llega XML (<...tmx) o HTML de error, lo avisamos claro
+  if (texto.startsWith("<")) {
+    throw new Error(
+      `MAP_URL apunta a un archivo XML (.tmx) o a una página de error: "${MAP_URL}". ` +
+      `El juego necesita el mapa en formato JSON (.tmj o .json)`
+    );
+  }
+
+  mapData = JSON.parse(texto);
 
   TILE_W = mapData.tilewidth || 20;
   TILE_H = mapData.tileheight || 20;
@@ -624,7 +671,6 @@ function initMapObjects() {
     if (b.name) buttonsByName[b.name] = b;
   }
 
-  // Imagen del sprite "prendido" para los botones
   const buttonOnConfig = TILESET_CONFIG["spr_groundswitch1_1.tsx"];
   if (buttonOnConfig && buttonOnConfig.image) {
     buttonOnImage = new Image();
@@ -638,6 +684,7 @@ function initMapObjects() {
 async function initMapRender() {
   await loadMapData();
   initMapObjects();
+  initPIObjects();
   buildTilesetRanges();
   decodeAllLayers();
   await loadImages();

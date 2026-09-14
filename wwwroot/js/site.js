@@ -1,6 +1,5 @@
 ﻿const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-ctx.imageSmoothingEnabled = false;
 
 let player = {
     x: 1550,
@@ -18,6 +17,10 @@ let grupoActivo = null;
 
 document.addEventListener("keydown", function(event) {
     let tecla = event.key.toLowerCase();
+
+    if (tecla.startsWith("arrow")) {
+        event.preventDefault();
+    }
 
     if (["w", "a", "s", "d"].includes(tecla)) {
         if (grupoActivo === null) {
@@ -127,9 +130,7 @@ let frameTimer = 0;
 
 const frameDuracion = 150;
 
-// Determina hacia dónde mira el personaje
 function actualizarDireccion() {
-
     let dx = 0;
     let dy = 0;
 
@@ -167,9 +168,7 @@ function actualizarDireccion() {
     return moviendose;
 }
 
-// Actualiza la animación
 function actualizarFrame(deltaTime, moviendose) {
-
     if (!moviendose) {
         frameActual = 0;
         frameTimer = 0;
@@ -179,7 +178,6 @@ function actualizarFrame(deltaTime, moviendose) {
     frameTimer += deltaTime;
 
     if (frameTimer >= frameDuracion) {
-
         frameTimer = 0;
 
         const totalFrames = sprites[direccionActual].length;
@@ -188,11 +186,7 @@ function actualizarFrame(deltaTime, moviendose) {
     }
 }
 
-// Actualiza el juego
 function update(deltaTime) {
-
-    // Mientras dura la transición de puerta (pantalla en negro): no se
-    // procesa movimiento ni animación, solo avanza el timer de la transición.
     if (isTransitioning()) {
         updateDoorTransition(deltaTime);
         return;
@@ -217,7 +211,6 @@ function update(deltaTime) {
         dx += speed;
     }
 
-    // Mueve respetando la capa "Interactuable" (definida en mapRender.js)
     moveWithWallCollision(player, dx, dy);
 
     const moviendose = actualizarDireccion();
@@ -228,18 +221,19 @@ function update(deltaTime) {
     checkButtons(player);
 }
 
-// Dibujar
 function draw() {
-
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 1. Dibuja el mapa (solo la room actual) y actualiza la cámara
+    // 1. Mapa (solo la room actual) + cámara
     drawScene(ctx, canvas, player, camera);
 
-    // 1b. Sprite "prendido" de los botones del puzzle, tapando el normal
+    // 1b. Botones del puzzle prendidos
     drawButtonOverlays(ctx, canvas, camera);
 
-    // 2. Dibuja el sprite del personaje
+    // 1c. Recortes de imagen debajo de los objetos PIx
+    drawPIOverlays(ctx, canvas, camera);
+
+    // 2. Personaje
     let spriteActual = sprites[direccionActual][frameActual];
 
     if (!spriteActual || !spriteActual.cargada) {
@@ -247,7 +241,6 @@ function draw() {
     }
 
     if (spriteActual && spriteActual.cargada) {
-
         ctx.drawImage(
             spriteActual,
             player.x - camera.x,
@@ -257,7 +250,7 @@ function draw() {
         );
     }
 
-    // 3. Overlay negro de la transición entre puertas
+    // 3. Overlay negro de transición de puertas
     drawTransitionOverlay(ctx, canvas);
 }
 
@@ -265,7 +258,6 @@ function draw() {
 let ultimoTimestamp = 0;
 
 function gameLoop(timestamp) {
-
     const deltaTime = timestamp - ultimoTimestamp;
 
     ultimoTimestamp = timestamp;
@@ -277,7 +269,6 @@ function gameLoop(timestamp) {
     requestAnimationFrame(gameLoop);
 }
 
-// Esperamos a que el mapa (imágenes + capas) esté listo antes de arrancar
 initMapRender().then(function() {
     requestAnimationFrame(gameLoop);
 });
