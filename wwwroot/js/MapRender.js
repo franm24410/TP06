@@ -1,13 +1,19 @@
-// mapRender.js
-// Carga el mapa exportado de Tiled (formato JSON, extensión .tmj) con fetch
-// y lo dibuja en el canvas, mostrando solo la habitación (room) donde está el jugador.
+// mapRender.js — versión MULTI-MAPA
+// Cada habitación es un archivo propio (H1.tmj, H2.tmj, ...) en wwwroot/Tiles.
+// Las puertas (capa Doors) con propiedades targetMap + targetDoor + direction
+// cambian de mapa con transición de pantalla negra de 0.5s.
 
-// URL del mapa .tmj (se puede sobrescribir desde la vista con window.MAP_URL)
-const MAP_URL = window.MAP_URL || "/Tiles/MAPATERMINADOAHORASI.tmj";
+const MAPS_FOLDER = "/Tiles/";
+const MAP_EXT = ".tmj";
+const MAPA_INICIAL = window.MAPA_INICIAL || "H1";
 
 let mapData = null;
+let currentMapName = null;
 let TILE_W = 20;
 let TILE_H = 20;
+
+// Límites REALES del contenido del mapa (se calculan desde los tiles decodificados)
+let worldBounds = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
 
 // ---------------------------------------------------------------------
 // 1. CONFIGURACIÓN DE TILESETS
@@ -47,7 +53,6 @@ function buildTilesetRanges() {
     const ts = list[i];
     const nextFirstgid = list[i + 1] ? list[i + 1].firstgid : Infinity;
 
-    // Caso 1: tileset embebido (trae "image" directo, sin tabla externa)
     if (ts.image) {
       tilesetRanges.push({
         firstgid: ts.firstgid,
@@ -60,7 +65,6 @@ function buildTilesetRanges() {
       continue;
     }
 
-    // Caso 2: tileset externo (.tsx) -> matcheamos por nombre de archivo
     const fileName = getFileName(ts.source);
     const config = fileName ? TILESET_CONFIG[fileName] : null;
     if (!config) {
@@ -82,7 +86,6 @@ function loadImages() {
   const promises = [];
   const imagesToLoad = new Set(tilesetRanges.map(r => r.image));
 
-  // Asegurar que el sprite de botón activado esté cargado
   const buttonOnConfig = TILESET_CONFIG["spr_groundswitch1_1.tsx"];
   if (buttonOnConfig && buttonOnConfig.image) {
     imagesToLoad.add(TILE_FOLDER + buttonOnConfig.image);
@@ -103,7 +106,7 @@ function loadImages() {
 }
 
 // ---------------------------------------------------------------------
-// 2. DECODIFICAR CAPAS
+// 2. DECODIFICAR CAPAS (soporta chunks base64, base64 entero y CSV)
 // ---------------------------------------------------------------------
 const FLIP_MASK = 0x1FFFFFFF;
 
@@ -117,22 +120,43 @@ function decodeChunkData(base64) {
 
 function getLayerTiles(layer) {
   const tiles = [];
-  if (!layer.chunks) return tiles;
-  for (const chunk of layer.chunks) {
-    const gids = decodeChunkData(chunk.data);
-    for (let row = 0; row < chunk.height; row++) {
-      for (let col = 0; col < chunk.width; col++) {
-        const rawGid = gids[row * chunk.width + col];
-        const gid = rawGid & FLIP_MASK;
+
+  if (layer.chunks) {
+    for (const chunk of layer.chunks) {
+      const gids = decodeChunkData(chunk.data);
+      for (let row = 0; row < chunk.height; row++) {
+        for (let col = 0; col < chunk.width; col++) {
+          const gid = gids[row * chunk.width + col] & FLIP_MASK;
+          if (gid === 0) continue;
+          tiles.push({ gid, tileX: chunk.x + col, tileY: chunk.y + row });
+        }
+      }
+    }
+    return tiles;
+  }
+
+  if (typeof layer.data === "string") {
+    const gids = decodeChunkData(layer.data);
+    for (let row = 0; row < layer.height; row++) {
+      for (let col = 0; col < layer.width; col++) {
+        const gid = gids[row * layer.width + col] & FLIP_MASK;
         if (gid === 0) continue;
-        tiles.push({
-          gid,
-          tileX: chunk.x + col,
-          tileY: chunk.y + row,
-        });
+        tiles.push({ gid, tileX: col, tileY: row });
+      }
+    }
+    return tiles;
+  }
+
+  if (Array.isArray(layer.data)) {
+    for (let row = 0; row < layer.height; row++) {
+      for (let col = 0; col < layer.width; col++) {
+        const gid = layer.data[row * layer.width + col] & FLIP_MASK;
+        if (gid === 0) continue;
+        tiles.push({ gid, tileX: col, tileY: row });
       }
     }
   }
+
   return tiles;
 }
 
@@ -144,6 +168,35 @@ function decodeAllLayers() {
     const layer = mapData.layers.find(l => l.name === name);
     if (layer) decodedLayers[name] = getLayerTiles(layer);
   }
+}
+
+// Recorre los tiles decodificados y saca el rectángulo real del contenido.
+// Así la cámara funciona aunque el mapa esté dibujado lejos del (0,0).
+function computeWorldBounds() {
+  let minTX = Infinity, minTY = Infinity, maxTX = -Infinity, maxTY = -Infinity;
+
+  for (const name of TILE_LAYER_NAMES) {
+    const tiles = decodedLayers[name];
+    if (!tiles) continue;
+    for (const t of tiles) {
+      if (t.tileX < minTX) minTX = t.tileX;
+      if (t.tileY < minTY) minTY = t.tileY;
+      if (t.tileX + 1 > maxTX) maxTX = t.tileX + 1;
+      if (t.tileY + 1 > maxTY) maxTY = t.tileY + 1;
+    }
+  }
+
+  if (minTX === Infinity) {
+    // No hay tiles decodificados: respaldo con el tamaño nominal del mapa
+    minTX = 0; minTY = 0; maxTX = mapData.width; maxTY = mapData.height;
+  }
+
+  worldBounds = {
+    minX: minTX * TILE_W,
+    minY: minTY * TILE_H,
+    maxX: maxTX * TILE_W,
+    maxY: maxTY * TILE_H,
+  };
 }
 
 // ---------------------------------------------------------------------
@@ -167,48 +220,7 @@ function rectsOverlap(a, b) {
 }
 
 // ---------------------------------------------------------------------
-// 3. ROOMS
-// ---------------------------------------------------------------------
-let rooms = [];
-
-function getAbsolutePoints(obj) {
-  if (obj.polygon) {
-    return obj.polygon.map(p => ({ x: obj.x + p.x, y: obj.y + p.y }));
-  }
-  return [
-    { x: obj.x, y: obj.y },
-    { x: obj.x + obj.width, y: obj.y },
-    { x: obj.x + obj.width, y: obj.y + obj.height },
-    { x: obj.x, y: obj.y + obj.height },
-  ];
-}
-
-function pointInPolygon(px, py, points) {
-  let inside = false;
-  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
-    const xi = points[i].x, yi = points[i].y;
-    const xj = points[j].x, yj = points[j].y;
-    const intersect = ((yi > py) !== (yj > py)) &&
-      (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
-    if (intersect) inside = !inside;
-  }
-  return inside;
-}
-
-function getCurrentRoomName(player) {
-  for (const room of rooms) {
-    const points = getAbsolutePoints(room);
-    if (pointInPolygon(player.x, player.y, points)) return room.name;
-  }
-  return null;
-}
-
-function getRoomPartsByName(name) {
-  return rooms.filter(r => r.name === name).map(getAbsolutePoints);
-}
-
-// ---------------------------------------------------------------------
-// 3c. COLISIÓN DE PAREDES
+// 3. COLISIÓN DE PAREDES (capa Interactuable)
 // ---------------------------------------------------------------------
 let wallObjects = [];
 
@@ -228,7 +240,7 @@ function moveWithWallCollision(player, dx, dy) {
 }
 
 // ---------------------------------------------------------------------
-// 3b. DOORS (puertas)
+// 4. DOORS (puertas) + cambio de mapa
 // ---------------------------------------------------------------------
 let doors = [];
 let doorsByName = {};
@@ -257,41 +269,88 @@ function getDoorSpawnPoint(door) {
   return { x: spawnX, y: spawnY };
 }
 
+// Respaldo: objeto llamado "Spawn" o, si no existe, el centro del contenido real
+function getDefaultSpawn() {
+  for (const layer of mapData.layers) {
+    if (layer.type !== "objectgroup") continue;
+    for (const obj of layer.objects || []) {
+      if (obj.name && obj.name.toLowerCase() === "spawn") {
+        return { x: obj.x + (obj.width || 0) / 2, y: obj.y + (obj.height || 0) / 2 };
+      }
+    }
+  }
+  return {
+    x: (worldBounds.minX + worldBounds.maxX) / 2,
+    y: (worldBounds.minY + worldBounds.maxY) / 2,
+  };
+}
+
+// --- Transición: pantalla negra 0.5s + carga del mapa nuevo a mitad de camino ---
 let doorTransition = null;
 let lastUsedDoor = null;
+const TRANSITION_HALF = 250;
 
 function isTransitioning() {
   return doorTransition !== null;
 }
 
-function startDoorTransition(player, targetX, targetY, arrivalDoor, duration = 500) {
+function startDoorTransition(player, change) {
   if (doorTransition) return;
-  doorTransition = { player, timer: 0, duration, targetX, targetY, teleported: false, arrivalDoor };
+  doorTransition = { player, phase: "in", timer: 0, change, arrivalDoor: null };
+}
+
+async function performMapChange(player, change) {
+  if (change.targetMap && change.targetMap !== currentMapName) {
+    await loadMap(change.targetMap);
+  }
+
+  const targetDoor = doorsByName[change.targetDoorName] || null;
+  if (!targetDoor) {
+    console.warn("No se encontró la puerta destino", change.targetDoorName, "en", currentMapName);
+  }
+
+  const spawn = targetDoor ? getDoorSpawnPoint(targetDoor) : getDefaultSpawn();
+  player.x = Math.round(spawn.x - player.width / 2);
+  player.y = Math.round(spawn.y - player.height / 2);
+
+  return targetDoor;
 }
 
 function updateDoorTransition(deltaTime) {
   if (!doorTransition) return;
-  doorTransition.timer += deltaTime;
-  const half = doorTransition.duration / 2;
+  const t = doorTransition;
 
-  if (!doorTransition.teleported && doorTransition.timer >= half) {
-    doorTransition.player.x = Math.round(doorTransition.targetX);
-    doorTransition.player.y = Math.round(doorTransition.targetY);
-    doorTransition.teleported = true;
-    lastUsedDoor = doorTransition.arrivalDoor;
-  }
-  if (doorTransition.timer >= doorTransition.duration) {
-    doorTransition = null;
+  if (t.phase === "in") {
+    t.timer += deltaTime;
+    if (t.timer >= TRANSITION_HALF) {
+      t.phase = "loading";
+      performMapChange(t.player, t.change)
+        .then(arrival => {
+          t.arrivalDoor = arrival;
+          lastUsedDoor = arrival;
+          t.phase = "out";
+          t.timer = 0;
+        })
+        .catch(err => {
+          console.error("Error cambiando de mapa:", err);
+          t.phase = "out";
+          t.timer = 0;
+        });
+    }
+  } else if (t.phase === "out") {
+    t.timer += deltaTime;
+    if (t.timer >= TRANSITION_HALF) {
+      doorTransition = null;
+    }
   }
 }
 
 function getTransitionAlpha() {
   if (!doorTransition) return 0;
-  const half = doorTransition.duration / 2;
-  if (doorTransition.timer < half) {
-    return doorTransition.timer / half;
-  }
-  return 1 - (doorTransition.timer - half) / half;
+  const t = doorTransition;
+  if (t.phase === "in") return Math.min(1, t.timer / TRANSITION_HALF);
+  if (t.phase === "loading") return 1;
+  return Math.max(0, 1 - t.timer / TRANSITION_HALF);
 }
 
 function drawTransitionOverlay(ctx, canvas) {
@@ -315,23 +374,25 @@ function checkDoors(player) {
     if (door === lastUsedDoor) continue;
     if (rectsOverlap(player, door)) {
       const props = propsToObject(door);
-      const targetName = "ph" + props.targetDoor;
-      const targetDoor = doorsByName[targetName];
-      if (!targetDoor) {
-        console.warn("La puerta", door.name, "apunta a una puerta que no existe:", targetName);
+
+      if (props.targetDoor === undefined && props.targetMap === undefined) {
+        console.warn("La puerta", door.name, "no tiene targetMap/targetDoor configurados");
         return;
       }
-      const spawn = getDoorSpawnPoint(targetDoor);
-      const finalX = spawn.x - player.width / 2;
-      const finalY = spawn.y - player.height / 2;
-      startDoorTransition(player, finalX, finalY, targetDoor);
+
+      const change = {
+        targetMap: props.targetMap || currentMapName,
+        targetDoorName: "ph" + props.targetDoor,
+      };
+
+      startDoorTransition(player, change);
       break;
     }
   }
 }
 
 // ---------------------------------------------------------------------
-// 3d. PUZZLE DE BOTONES (TB1..TB12)
+// 5. PUZZLE DE BOTONES (TB1..TB12)
 // ---------------------------------------------------------------------
 let buttons = [];
 let buttonsByName = {};
@@ -414,12 +475,9 @@ function checkButtons(player) {
     const numeroBoton = parseInt(nombreBoton.replace("TB", ""));
     if (isNaN(numeroBoton)) continue;
 
-    // 🔒 BOTÓN BLOQUEADO: si está prendido (lo tocaste hace menos de 5s),
-    // se ignora por completo hasta que se apague. Así no se detecta
-    // "muchísimas veces" mientras estás parado encima.
+    // 🔒 Botón bloqueado: si está prendido (lo tocaste hace menos de 5s), se ignora
     if (isButtonActive(nombreBoton)) continue;
 
-    // --- Lógica de secuencia (solo si el puzzle no está completado) ---
     if (!puzzleCompletado) {
       const secuencia = secuencias[puzzleRondaActual];
 
@@ -428,7 +486,6 @@ function checkButtons(player) {
         const esperadoSegundo = secuencia[1];
 
         if (!puzzleEsperandoSegundo) {
-          // Esperando el PRIMER botón de la ronda
           if (numeroBoton === esperadoPrimero) {
             puzzleEsperandoSegundo = true;
             console.log(`✅ Ronda ${puzzleRondaActual + 1}: primer botón correcto (${nombreBoton})`);
@@ -437,7 +494,6 @@ function checkButtons(player) {
             resetPuzzle();
           }
         } else {
-          // Esperando el SEGUNDO botón de la ronda
           if (numeroBoton === esperadoSegundo) {
             const nombrePrimerBoton = "TB" + esperadoPrimero;
 
@@ -463,10 +519,9 @@ function checkButtons(player) {
       }
     }
 
-    // Feedback visual: se prende por 5s (y queda bloqueado esos mismos 5s)
     activateButton(nombreBoton);
 
-    break; // Solo procesar un botón por frame
+    break;
   }
 }
 
@@ -508,7 +563,7 @@ function drawButtonOverlays(ctx, canvas, camera) {
 }
 
 // ---------------------------------------------------------------------
-// 3e. OBJETOS PIx — recorte de imagen debajo del objeto
+// 6. OBJETOS PIx — recorte de imagen debajo del objeto
 // ---------------------------------------------------------------------
 let piObjects = [];
 let piImage = null;
@@ -516,7 +571,6 @@ let piImage = null;
 function initPIObjects() {
   piObjects = [];
 
-  // Busca en TODAS las capas de objetos los que se llamen PI1, PI2, ...
   for (const layer of mapData.layers) {
     if (layer.type !== "objectgroup") continue;
     for (const obj of layer.objects || []) {
@@ -527,7 +581,7 @@ function initPIObjects() {
   }
 
   const ruta = (typeof PI_IMAGEN !== "undefined" && PI_IMAGEN) ? PI_IMAGEN : null;
-  if (ruta) {
+  if (ruta && !piImage) {
     piImage = new Image();
     piImage.onerror = () => {
       console.error("No se pudo cargar PI_IMAGEN:", ruta);
@@ -550,17 +604,15 @@ function drawPIOverlays(ctx, canvas, camera) {
 
     const sx = r[0], sy = r[1], sw = r[2], sh = r[3];
 
-    // Centrado horizontalmente, pegado ABAJO de la hitbox del objeto
     const destX = Math.round(obj.x + obj.width / 2 - sw / 2 + dx0 - camera.x);
     const destY = Math.round(obj.y + obj.height + dy0 - camera.y);
 
-    // Solo se dibuja el cuadradito recortado, no la imagen entera
     ctx.drawImage(piImage, sx, sy, sw, sh, destX, destY, sw, sh);
   }
 }
 
 // ---------------------------------------------------------------------
-// 4. DIBUJADO
+// 7. DIBUJADO
 // ---------------------------------------------------------------------
 function drawTile(ctx, gid, worldX, worldY, camera) {
   const range = tilesetRanges.find(r => gid >= r.firstgid && gid <= r.lastgid);
@@ -582,37 +634,29 @@ function drawTile(ctx, gid, worldX, worldY, camera) {
 }
 
 function drawScene(ctx, canvas, player, camera) {
-  const currentRoomName = getCurrentRoomName(player);
-  const roomParts = currentRoomName ? getRoomPartsByName(currentRoomName) : [];
-
   ctx.fillStyle = "black";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  if (roomParts.length === 0) return;
+  if (!mapData) return;
 
-  const allPoints = roomParts.flat();
-  const minX = Math.min(...allPoints.map(p => p.x));
-  const minY = Math.min(...allPoints.map(p => p.y));
-  const maxX = Math.max(...allPoints.map(p => p.x));
-  const maxY = Math.max(...allPoints.map(p => p.y));
+  // Límites REALES del contenido (no el tamaño nominal del mapa)
+  const w = worldBounds.maxX - worldBounds.minX;
+  const h = worldBounds.maxY - worldBounds.minY;
 
-  camera.x = Math.max(minX, Math.min(player.x - canvas.width / 2, Math.max(minX, maxX - canvas.width)));
-  camera.y = Math.max(minY, Math.min(player.y - canvas.height / 2, Math.max(minY, maxY - canvas.height)));
+  if (w <= canvas.width) {
+    camera.x = worldBounds.minX + (w - canvas.width) / 2;
+  } else {
+    camera.x = Math.max(worldBounds.minX, Math.min(player.x - canvas.width / 2, worldBounds.maxX - canvas.width));
+  }
 
-  // Cámara en píxeles enteros (evita líneas entre tiles)
+  if (h <= canvas.height) {
+    camera.y = worldBounds.minY + (h - canvas.height) / 2;
+  } else {
+    camera.y = Math.max(worldBounds.minY, Math.min(player.y - canvas.height / 2, worldBounds.maxY - canvas.height));
+  }
+
   camera.x = Math.round(camera.x);
   camera.y = Math.round(camera.y);
-
-  ctx.save();
-  ctx.beginPath();
-  for (const points of roomParts) {
-    ctx.moveTo(points[0].x - camera.x, points[0].y - camera.y);
-    for (let i = 1; i < points.length; i++) {
-      ctx.lineTo(points[i].x - camera.x, points[i].y - camera.y);
-    }
-    ctx.closePath();
-  }
-  ctx.clip();
 
   for (const name of TILE_LAYER_NAMES) {
     const tiles = decodedLayers[name];
@@ -621,40 +665,49 @@ function drawScene(ctx, canvas, player, camera) {
       drawTile(ctx, t.gid, t.tileX, t.tileY, camera);
     }
   }
-
-  ctx.restore();
 }
 
 // ---------------------------------------------------------------------
-// 5. CARGA DEL MAPA .tmj
+// 8. CARGA DE MAPAS (H1, H2, ...)
 // ---------------------------------------------------------------------
-async function loadMapData() {
-  const res = await fetch(MAP_URL, { cache: "no-store" });
+async function loadMap(mapName) {
+  const url = MAPS_FOLDER + mapName + MAP_EXT;
 
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
-    throw new Error(`No se pudo cargar el mapa: HTTP ${res.status} - ${MAP_URL}`);
+    throw new Error(`No se pudo cargar el mapa: HTTP ${res.status} - ${url}`);
   }
 
   const texto = (await res.text()).trim();
-
-  // Si llega XML (<...tmx) o HTML de error, lo avisamos claro
   if (texto.startsWith("<")) {
     throw new Error(
-      `MAP_URL apunta a un archivo XML (.tmx) o a una página de error: "${MAP_URL}". ` +
-      `El juego necesita el mapa en formato JSON (.tmj o .json)`
+      `"${url}" no es JSON (.tmj). ¿Es un .tmx (XML)? El juego necesita el formato JSON.`
     );
   }
 
   mapData = JSON.parse(texto);
-
   TILE_W = mapData.tilewidth || 20;
   TILE_H = mapData.tileheight || 20;
+  currentMapName = mapName;
+
+  tilesetRanges.length = 0;
+  for (const k in decodedLayers) delete decodedLayers[k];
+
+  initMapObjects();
+  initPIObjects();
+  buildTilesetRanges();
+  decodeAllLayers();
+  computeWorldBounds();
+  await loadImages();
+
+  console.log(
+    "Mapa cargado:", currentMapName,
+    "| contenido real:", worldBounds.minX + "," + worldBounds.minY,
+    "a", worldBounds.maxX + "," + worldBounds.maxY
+  );
 }
 
 function initMapObjects() {
-  const roomsLayer = mapData.layers.find(l => l.name === "Rooms");
-  rooms = roomsLayer ? roomsLayer.objects : [];
-
   const wallsLayer = mapData.layers.find(l => l.name === "Interactuable");
   wallObjects = wallsLayer ? wallsLayer.objects : [];
 
@@ -679,14 +732,12 @@ function initMapObjects() {
 }
 
 // ---------------------------------------------------------------------
-// 6. INICIALIZACIÓN
+// 9. INICIALIZACIÓN
 // ---------------------------------------------------------------------
 async function initMapRender() {
-  await loadMapData();
-  initMapObjects();
-  initPIObjects();
-  buildTilesetRanges();
-  decodeAllLayers();
-  await loadImages();
-  console.log("Mapa cargado:", mapData.width, "x", mapData.height, "| Rooms encontradas:", rooms.length);
+  await loadMap(MAPA_INICIAL);
+
+  const spawn = getDefaultSpawn();
+  player.x = Math.round(spawn.x - player.width / 2);
+  player.y = Math.round(spawn.y - player.height / 2);
 }

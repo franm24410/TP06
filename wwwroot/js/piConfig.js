@@ -13,4 +13,4 @@ const PI_RECORTES = {
 
 // Ajuste fino de posición (en píxeles de mundo), por si queda corrido
 const PI_DX = 0;
-const PI_DY = 6;
+const PI_DY = -10;
