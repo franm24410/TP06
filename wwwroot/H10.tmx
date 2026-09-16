@@ -346,67 +346,67 @@
  "tilesets":[
         {
          "firstgid":1,
-         "source":"bg_ruinseasynam2.tsx"
+         "source":"Tiles\/bg_ruinseasynam2.tsx"
         }, 
         {
          "firstgid":73,
-         "source":"bg_ruinseasynam3.tsx"
+         "source":"Tiles\/bg_ruinseasynam3.tsx"
         }, 
         {
          "firstgid":447,
-         "source":"bg_tundratiles.tsx"
+         "source":"Tiles\/bg_tundratiles.tsx"
         }, 
         {
          "firstgid":1122,
-         "source":"spr_snowpap_0.tsx"
+         "source":"Tiles\/spr_snowpap_0.tsx"
         }, 
         {
          "firstgid":1124,
-         "source":"spr_groundswitch1_1.tsx"
+         "source":"Tiles\/spr_groundswitch1_1.tsx"
         }, 
         {
          "firstgid":1125,
-         "source":"spr_npc_sign_0.tsx"
+         "source":"Tiles\/spr_npc_sign_0.tsx"
         }, 
         {
          "firstgid":1126,
-         "source":"spr_smallweb_0.tsx"
+         "source":"Tiles\/spr_smallweb_0.tsx"
         }, 
         {
          "firstgid":1127,
-         "source":"spr_xmastree_0.tsx"
+         "source":"Tiles\/spr_xmastree_0.tsx"
         }, 
         {
          "firstgid":1139,
-         "source":"spr_papyrushouse_0.tsx"
+         "source":"Tiles\/spr_papyrushouse_0.tsx"
         }, 
         {
          "firstgid":1239,
-         "source":"spr_vinespillar_0.tsx"
+         "source":"Tiles\/spr_vinespillar_0.tsx"
         }, 
         {
          "firstgid":1245,
-         "source":"spr_snowdinlogo_ja_0.tsx"
+         "source":"Tiles\/spr_snowdinlogo_ja_0.tsx"
         }, 
         {
          "firstgid":1263,
-         "source":"spr_spiketile_1.tsx"
+         "source":"Tiles\/spr_spiketile_1.tsx"
         }, 
         {
          "firstgid":1264,
-         "source":"spr_groundswitch1_0.tsx"
+         "source":"Tiles\/spr_groundswitch1_0.tsx"
         }, 
         {
          "firstgid":1265,
-         "source":"spr_spiketile_0.tsx"
+         "source":"Tiles\/spr_spiketile_0.tsx"
         }, 
         {
          "firstgid":1266,
-         "source":"bg_ruinseasynam1.tsx"
+         "source":"Tiles\/bg_ruinseasynam1.tsx"
         }, 
         {
          "firstgid":1306,
-         "source":"bg_ruintiles1.tsx"
+         "source":"Tiles\/bg_ruintiles1.tsx"
         }],
  "tilewidth":20,
  "type":"map",

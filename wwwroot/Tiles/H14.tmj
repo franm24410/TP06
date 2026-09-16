@@ -272,7 +272,7 @@
                  "y":-760
                 }, 
                 {
-                 "height":40.3636363636364,
+                 "height":40.3636,
                  "id":359,
                  "name":"ph27",
                  "opacity":1,
@@ -297,7 +297,7 @@
                  "visible":true,
                  "width":7.83333,
                  "x":4331.5,
-                 "y":759.969363636364
+                 "y":759.969
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -311,28 +311,28 @@
          "name":"Interactuable",
          "objects":[
                 {
-                 "height":738.166666666667,
+                 "height":738.167,
                  "id":161,
                  "name":"",
                  "opacity":1,
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":114.333333333333,
-                 "x":4065.66666666667,
-                 "y":-719.666666666667
+                 "width":114.333,
+                 "x":4065.67,
+                 "y":-719.667
                 }, 
                 {
-                 "height":681.021739130435,
+                 "height":681.022,
                  "id":169,
                  "name":"",
                  "opacity":1,
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":60.34375,
-                 "x":4119.625,
-                 "y":139.978260869565
+                 "width":60.3438,
+                 "x":4119.63,
+                 "y":139.978
                 }, 
                 {
                  "height":43.75,
@@ -342,7 +342,7 @@
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":59.7111111111108,
+                 "width":59.7111,
                  "x":4120.25,
                  "y":20.25
                 }, 
@@ -414,7 +414,7 @@
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":219.5833,
+                 "width":219.583,
                  "x":4060.42,
                  "y":-820
                 }, 
@@ -427,7 +427,7 @@
                  "type":"",
                  "visible":true,
                  "width":59.7102,
-                 "x":4280.1125,
+                 "x":4280.11,
                  "y":739.091
                 }],
          "opacity":1,
@@ -440,7 +440,31 @@
          "draworder":"topdown",
          "id":8,
          "name":"Interactuable-Piso",
-         "objects":[],
+         "objects":[
+                {
+                 "height":20.5,
+                 "id":476,
+                 "name":"26",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":20,
+                 "x":4075.66666666667,
+                 "y":-752.25
+                }, 
+                {
+                 "height":20.5,
+                 "id":477,
+                 "name":"28",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":20,
+                 "x":4305.5,
+                 "y":768.5
+                }],
          "opacity":1,
          "type":"objectgroup",
          "visible":true,
@@ -482,7 +506,7 @@
          "y":0
         }],
  "nextlayerid":15,
- "nextobjectid":476,
+ "nextobjectid":478,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",

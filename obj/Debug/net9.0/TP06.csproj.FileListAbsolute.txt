@@ -777,6 +777,8 @@ C:\Users\50235299\Downloads\TP06\obj\Debug\net9.0\compressed\50u4j4v7b2-qezjx3ti
 C:\Users\50235299\Downloads\TP06\obj\Debug\net9.0\TP06.csproj.Up2Date
 C:\Users\50235299\Downloads\TP06\obj\Debug\net9.0\compressed\qvgokuhdq9-onedxuyv1z.gz
 C:\Users\50235299\Downloads\TP06\obj\Debug\net9.0\compressed\myogmasy63-huu3beabey.gz
-C:\Users\50235173\Downloads\TP06\obj\Debug\net9.0\compressed\myogmasy63-vbxxv8yf27.gz
-C:\Users\50235173\Downloads\TP06\obj\Debug\net9.0\compressed\qvgokuhdq9-2wm4vgxhtf.gz
 C:\Users\50235173\Downloads\TP06\obj\Debug\net9.0\compressed\k7zdob11ie-f8ivxzzhut.gz
+C:\Users\50235173\Downloads\TP06\obj\Debug\net9.0\compressed\r1to7txglk-f88se2vrju.gz
+C:\Users\50235173\Downloads\TP06\obj\Debug\net9.0\compressed\qvgokuhdq9-ezpjsaky2g.gz
+C:\Users\50235173\Downloads\TP06\obj\Debug\net9.0\compressed\mryqmz297u-lvz4l42zjb.gz
+C:\Users\50235173\Downloads\TP06\obj\Debug\net9.0\compressed\myogmasy63-w2zwiozcfn.gz

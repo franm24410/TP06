@@ -15,8 +15,60 @@ let speed = 5;
 let keys = {};
 let grupoActivo = null;
 
+// ---------------------------------------------------------------------
+// GUI DE CARTELES
+// ---------------------------------------------------------------------
+let signGuiAbierta = false;
+
+function abrirSignGui(texto) {
+    if (signGuiAbierta) return;   // si ya está abierto, no hace nada
+
+    const gui = document.getElementById("signGui");
+    const box = document.getElementById("signGuiTexto");
+    if (!gui || !box) return;
+
+    box.textContent = "";          // limpia cualquier texto anterior
+    box.textContent = String(texto);
+    gui.classList.add("abierto");
+    signGuiAbierta = true;
+
+    // Frena el movimiento en seco mientras leés
+    for (const k in keys) keys[k] = false;
+    grupoActivo = null;
+}
+
+function cerrarSignGui() {
+    const gui = document.getElementById("signGui");
+    if (!gui) return;
+
+    gui.classList.remove("abierto");
+    signGuiAbierta = false;
+}
+
+// ---------------------------------------------------------------------
+// TECLADO
+// ---------------------------------------------------------------------
 document.addEventListener("keydown", function(event) {
+    if (event.repeat) return;   // ignora la repetición automática al mantener la tecla
+
     let tecla = event.key.toLowerCase();
+
+    // Con la GUI abierta: CUALQUIER tecla la cierra y no hace nada más
+    if (signGuiAbierta) {
+        cerrarSignGui();
+        event.preventDefault();
+        return;
+    }
+
+    // Con E: lee el cartel que estés tocando
+    if (tecla === "e") {
+        const cartel = getSignAtPlayer(player);
+        if (cartel) {
+            abrirSignGui(cartel.texto);
+            event.preventDefault();
+            return;
+        }
+    }
 
     if (tecla.startsWith("arrow")) {
         event.preventDefault();
@@ -69,7 +121,9 @@ document.addEventListener("keyup", function(event) {
     }
 });
 
+// ---------------------------------------------------------------------
 // Sprites del personaje
+// ---------------------------------------------------------------------
 const spriteSources = {
     idle: [
         "/img/Caminar/spr_f_maincharad_0.png"
@@ -123,7 +177,9 @@ for (let direccion in spriteSources) {
     });
 }
 
-// Estado de la animación
+// ---------------------------------------------------------------------
+// Animación
+// ---------------------------------------------------------------------
 let direccionActual = "down";
 let frameActual = 0;
 let frameTimer = 0;
@@ -186,11 +242,18 @@ function actualizarFrame(deltaTime, moviendose) {
     }
 }
 
+// ---------------------------------------------------------------------
+// Update
+// ---------------------------------------------------------------------
 function update(deltaTime) {
+    // Mientras dura la transición de puerta: solo avanza el timer
     if (isTransitioning()) {
         updateDoorTransition(deltaTime);
         return;
     }
+
+    // Con la GUI del cartel abierta el juego queda pausado
+    if (signGuiAbierta) return;
 
     let dx = 0;
     let dy = 0;
@@ -221,10 +284,13 @@ function update(deltaTime) {
     checkButtons(player);
 }
 
+// ---------------------------------------------------------------------
+// Draw
+// ---------------------------------------------------------------------
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 1. Mapa (solo la room actual) + cámara
+    // 1. Mapa + cámara
     drawScene(ctx, canvas, player, camera);
 
     // 1b. Botones del puzzle prendidos
@@ -254,7 +320,9 @@ function draw() {
     drawTransitionOverlay(ctx, canvas);
 }
 
+// ---------------------------------------------------------------------
 // Game loop
+// ---------------------------------------------------------------------
 let ultimoTimestamp = 0;
 
 function gameLoop(timestamp) {

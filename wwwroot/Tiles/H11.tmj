@@ -1,4 +1,12 @@
 { "compressionlevel":-1,
+ "editorsettings":
+    {
+     "export":
+        {
+         "format":"tmx",
+         "target":"H11.tmx"
+        }
+    },
  "height":8,
  "infinite":true,
  "layers":[
@@ -244,7 +252,19 @@
          "draworder":"topdown",
          "id":8,
          "name":"Interactuable-Piso",
-         "objects":[],
+         "objects":[
+                {
+                 "height":20.5,
+                 "id":476,
+                 "name":"19",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":20,
+                 "x":3133.66666666667,
+                 "y":-592.583333333333
+                }],
          "opacity":1,
          "type":"objectgroup",
          "visible":true,
@@ -274,7 +294,7 @@
          "y":0
         }],
  "nextlayerid":15,
- "nextobjectid":476,
+ "nextobjectid":477,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",

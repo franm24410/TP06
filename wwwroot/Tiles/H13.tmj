@@ -164,7 +164,7 @@
                         {
                          "name":"targetMap",
                          "type":"string",
-                         "value":"H7"
+                         "value":"H8"
                         }],
                  "rotation":0,
                  "type":"",
@@ -294,7 +294,31 @@
          "draworder":"topdown",
          "id":8,
          "name":"Interactuable-Piso",
-         "objects":[],
+         "objects":[
+                {
+                 "height":20.5,
+                 "id":476,
+                 "name":"23",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":20,
+                 "x":3569,
+                 "y":-663.25
+                }, 
+                {
+                 "height":20.5,
+                 "id":477,
+                 "name":"26",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":20,
+                 "x":3921.66666666667,
+                 "y":-751.916666666667
+                }],
          "opacity":1,
          "type":"objectgroup",
          "visible":true,
@@ -324,7 +348,7 @@
          "y":0
         }],
  "nextlayerid":15,
- "nextobjectid":476,
+ "nextobjectid":478,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",

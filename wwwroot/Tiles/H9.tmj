@@ -258,7 +258,7 @@
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":259.3333,
+                 "width":259.333,
                  "x":3120.96,
                  "y":-518.75
                 }, 
@@ -320,7 +320,31 @@
          "draworder":"topdown",
          "id":8,
          "name":"Interactuable-Piso",
-         "objects":[],
+         "objects":[
+                {
+                 "height":20.5,
+                 "id":476,
+                 "name":"13",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":20,
+                 "x":3339.16210011372,
+                 "y":-450.295787113524
+                }, 
+                {
+                 "height":20.5,
+                 "id":477,
+                 "name":"16",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":20,
+                 "x":3219.66666666667,
+                 "y":-291.583333333333
+                }],
          "opacity":1,
          "type":"objectgroup",
          "visible":true,
@@ -362,7 +386,7 @@
          "y":0
         }],
  "nextlayerid":15,
- "nextobjectid":476,
+ "nextobjectid":478,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",

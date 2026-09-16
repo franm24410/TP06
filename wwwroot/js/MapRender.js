@@ -1,7 +1,7 @@
-// mapRender.js — versión MULTI-MAPA
-// Cada habitación es un archivo propio (H1.tmj, H2.tmj, ...) en wwwroot/Tiles.
-// Las puertas (capa Doors) con propiedades targetMap + targetDoor + direction
-// cambian de mapa con transición de pantalla negra de 0.5s.
+// mapRender.js — versión MULTI-MAPA con cuadrados de aparición y carteles
+// Puertas: capa Doors, nombre phX + propiedad targetMap.
+// Al pasar por phX, el jugador aparece en el objeto llamado "X" del mapa destino.
+// Carteles: objetos C1..C10 en la capa "Interactuable-Pared".
 
 const MAPS_FOLDER = "/Tiles/";
 const MAP_EXT = ".tmj";
@@ -170,8 +170,6 @@ function decodeAllLayers() {
   }
 }
 
-// Recorre los tiles decodificados y saca el rectángulo real del contenido.
-// Así la cámara funciona aunque el mapa esté dibujado lejos del (0,0).
 function computeWorldBounds() {
   let minTX = Infinity, minTY = Infinity, maxTX = -Infinity, maxTY = -Infinity;
 
@@ -187,7 +185,6 @@ function computeWorldBounds() {
   }
 
   if (minTX === Infinity) {
-    // No hay tiles decodificados: respaldo con el tamaño nominal del mapa
     minTX = 0; minTY = 0; maxTX = mapData.width; maxTY = mapData.height;
   }
 
@@ -219,6 +216,17 @@ function rectsOverlap(a, b) {
   );
 }
 
+function findObjectByName(name) {
+  const buscado = String(name).trim();
+  for (const layer of mapData.layers) {
+    if (layer.type !== "objectgroup") continue;
+    for (const obj of layer.objects || []) {
+      if (obj.name && String(obj.name).trim() === buscado) return obj;
+    }
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------------
 // 3. COLISIÓN DE PAREDES (capa Interactuable)
 // ---------------------------------------------------------------------
@@ -240,44 +248,15 @@ function moveWithWallCollision(player, dx, dy) {
 }
 
 // ---------------------------------------------------------------------
-// 4. DOORS (puertas) + cambio de mapa
+// 4. DOORS (puertas) + cambio de mapa con cuadrados de aparición
 // ---------------------------------------------------------------------
 let doors = [];
 let doorsByName = {};
 
-const DIRECTION_OFFSETS = {
-  up:    { x: 0, y: -1 },
-  down:  { x: 0, y: 1 },
-  left:  { x: -1, y: 0 },
-  right: { x: 1, y: 0 },
-};
-
-function getDoorSpawnPoint(door) {
-  const props = propsToObject(door);
-  const dir = DIRECTION_OFFSETS[props.direction] || { x: 0, y: 1 };
-
-  let spawnX = door.x + door.width / 2;
-  let spawnY = door.y + door.height / 2;
-
-  if (dir.x !== 0) {
-    spawnX = dir.x > 0 ? door.x + door.width + TILE_W / 2 : door.x - TILE_W / 2;
-  }
-  if (dir.y !== 0) {
-    spawnY = dir.y > 0 ? door.y + door.height + TILE_H / 2 : door.y - TILE_H / 2;
-  }
-
-  return { x: spawnX, y: spawnY };
-}
-
-// Respaldo: objeto llamado "Spawn" o, si no existe, el centro del contenido real
 function getDefaultSpawn() {
-  for (const layer of mapData.layers) {
-    if (layer.type !== "objectgroup") continue;
-    for (const obj of layer.objects || []) {
-      if (obj.name && obj.name.toLowerCase() === "spawn") {
-        return { x: obj.x + (obj.width || 0) / 2, y: obj.y + (obj.height || 0) / 2 };
-      }
-    }
+  const spawn = findObjectByName("Spawn") || findObjectByName("spawn");
+  if (spawn) {
+    return { x: spawn.x + (spawn.width || 0) / 2, y: spawn.y + (spawn.height || 0) / 2 };
   }
   return {
     x: (worldBounds.minX + worldBounds.maxX) / 2,
@@ -285,7 +264,6 @@ function getDefaultSpawn() {
   };
 }
 
-// --- Transición: pantalla negra 0.5s + carga del mapa nuevo a mitad de camino ---
 let doorTransition = null;
 let lastUsedDoor = null;
 const TRANSITION_HALF = 250;
@@ -296,7 +274,7 @@ function isTransitioning() {
 
 function startDoorTransition(player, change) {
   if (doorTransition) return;
-  doorTransition = { player, phase: "in", timer: 0, change, arrivalDoor: null };
+  doorTransition = { player, phase: "in", timer: 0, change };
 }
 
 async function performMapChange(player, change) {
@@ -304,16 +282,26 @@ async function performMapChange(player, change) {
     await loadMap(change.targetMap);
   }
 
-  const targetDoor = doorsByName[change.targetDoorName] || null;
-  if (!targetDoor) {
-    console.warn("No se encontró la puerta destino", change.targetDoorName, "en", currentMapName);
+  const square = findObjectByName(change.spawnSquareName);
+  let spawn;
+
+  if (square) {
+    spawn = {
+      x: square.x + (square.width || 0) / 2,
+      y: square.y + (square.height || 0) / 2,
+    };
+  } else {
+    console.warn(
+      `No se encontró el cuadrado "${change.spawnSquareName}" en ${currentMapName}. ` +
+      `Usando Spawn / centro del mapa como respaldo.`
+    );
+    spawn = getDefaultSpawn();
   }
 
-  const spawn = targetDoor ? getDoorSpawnPoint(targetDoor) : getDefaultSpawn();
   player.x = Math.round(spawn.x - player.width / 2);
   player.y = Math.round(spawn.y - player.height / 2);
 
-  return targetDoor;
+  lastUsedDoor = doors.find(d => rectsOverlap(player, d)) || null;
 }
 
 function updateDoorTransition(deltaTime) {
@@ -325,9 +313,7 @@ function updateDoorTransition(deltaTime) {
     if (t.timer >= TRANSITION_HALF) {
       t.phase = "loading";
       performMapChange(t.player, t.change)
-        .then(arrival => {
-          t.arrivalDoor = arrival;
-          lastUsedDoor = arrival;
+        .then(() => {
           t.phase = "out";
           t.timer = 0;
         })
@@ -375,14 +361,14 @@ function checkDoors(player) {
     if (rectsOverlap(player, door)) {
       const props = propsToObject(door);
 
-      if (props.targetDoor === undefined && props.targetMap === undefined) {
-        console.warn("La puerta", door.name, "no tiene targetMap/targetDoor configurados");
+      if (!props.targetMap) {
+        console.warn("La puerta", door.name, "no tiene la propiedad targetMap configurada");
         return;
       }
 
       const change = {
-        targetMap: props.targetMap || currentMapName,
-        targetDoorName: "ph" + props.targetDoor,
+        targetMap: props.targetMap,
+        spawnSquareName: door.name.replace(/^ph/i, ""),
       };
 
       startDoorTransition(player, change);
@@ -472,7 +458,9 @@ function checkButtons(player) {
     if (!rectsOverlap(player, button)) continue;
 
     const nombreBoton = button.name;
-    const numeroBoton = parseInt(nombreBoton.replace("TB", ""));
+    // 🔒 Solo cuentan como botón los objetos llamados TB1, TB2, ... TB12
+    if (!/^TB\d+$/i.test(nombreBoton)) continue;
+    const numeroBoton = parseInt(nombreBoton.replace(/^TB/i, ""), 10);
     if (isNaN(numeroBoton)) continue;
 
     // 🔒 Botón bloqueado: si está prendido (lo tocaste hace menos de 5s), se ignora
@@ -612,6 +600,47 @@ function drawPIOverlays(ctx, canvas, camera) {
 }
 
 // ---------------------------------------------------------------------
+// 6b. CARTELES (C1..C10) — capa "Interactuable-Pared"
+// ---------------------------------------------------------------------
+let signs = [];
+
+function initSignObjects() {
+  signs = [];
+
+  const layer = mapData.layers.find(l => l.name === "Interactuable-Pared");
+  if (!layer) return;
+
+  for (const obj of layer.objects || []) {
+    if (obj.name && /^C\d+$/i.test(obj.name)) {
+      signs.push(obj);
+    }
+  }
+}
+
+// Devuelve el cartel que el jugador está tocando (con margen de 8px),
+// o null si no hay ninguno. El texto sale de CARTELES_TEXTOS (cartelesConfig.js).
+function getSignAtPlayer(player) {
+  const hit = {
+    x: player.x - 8,
+    y: player.y - 8,
+    width: player.width + 16,
+    height: player.height + 16,
+  };
+
+  for (const s of signs) {
+    if (rectsOverlap(hit, s)) {
+      const textos = (typeof CARTELES_TEXTOS !== "undefined") ? CARTELES_TEXTOS : {};
+      return {
+        name: s.name,
+        texto: textos[s.name] || textos["*"] || "peronesrico",
+      };
+    }
+  }
+
+  return null;
+}
+
+// ---------------------------------------------------------------------
 // 7. DIBUJADO
 // ---------------------------------------------------------------------
 function drawTile(ctx, gid, worldX, worldY, camera) {
@@ -639,7 +668,6 @@ function drawScene(ctx, canvas, player, camera) {
 
   if (!mapData) return;
 
-  // Límites REALES del contenido (no el tamaño nominal del mapa)
   const w = worldBounds.maxX - worldBounds.minX;
   const h = worldBounds.maxY - worldBounds.minY;
 
@@ -695,6 +723,7 @@ async function loadMap(mapName) {
 
   initMapObjects();
   initPIObjects();
+  initSignObjects();
   buildTilesetRanges();
   decodeAllLayers();
   computeWorldBounds();

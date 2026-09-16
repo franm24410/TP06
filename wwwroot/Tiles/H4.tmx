@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="39" height="23" tilewidth="20" tileheight="20" infinite="1" nextlayerid="15" nextobjectid="477">
+<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="39" height="23" tilewidth="20" tileheight="20" infinite="1" nextlayerid="15" nextobjectid="480">
  <tileset firstgid="1" source="bg_ruinseasynam2.tsx"/>
  <tileset firstgid="73" source="bg_ruinseasynam3.tsx"/>
  <tileset firstgid="447" source="bg_tundratiles.tsx"/>
@@ -106,7 +106,8 @@
   <object id="109" x="3179.67" y="40.6667" width="200.667" height="139.667"/>
   <object id="111" x="2763" y="-45" width="16.5" height="226.5"/>
   <object id="112" x="2766.5" y="180" width="414.5" height="1"/>
-  <object id="476" x="2748.58" y="-207.273" width="64.1818" height="18.5455"/>
+  <object id="476" x="2741.58" y="-199.606" width="64.1818" height="18.5455"/>
+  <object id="479" name="10" x="3343" y="7.66665" width="20.6667" height="20.6667"/>
  </objectgroup>
  <objectgroup id="8" name="Interactuable-Piso">
   <object id="298" name="cai" x="2781" y="-39" width="40.6667" height="118.667"/>
@@ -118,6 +119,8 @@
   <object id="305" name="cai" x="3118.67" y="-0.333333" width="22" height="180.667"/>
   <object id="306" name="cai" x="3040" y="-39.6667" width="40.6667" height="181.333"/>
   <object id="307" name="cai" x="3006.67" y="70" width="33" height="71.3333"/>
+  <object id="477" name="5" x="2699.67" y="-120.667" width="20.6667" height="20.6667"/>
+  <object id="478" name="7" x="2761.67" y="-137" width="20.6667" height="20.6667"/>
  </objectgroup>
  <objectgroup id="10" name="Interactuable-Pared" visible="0">
   <object id="53" x="2741" y="-180" width="58" height="19.3333"/>

@@ -333,7 +333,7 @@
                  "y":-560.25
                 }, 
                 {
-                 "height":42.8792187868776,
+                 "height":42.8792,
                  "id":143,
                  "name":"",
                  "opacity":1,
@@ -345,7 +345,7 @@
                  "y":-560.25
                 }, 
                 {
-                 "height":41.8792187868775,
+                 "height":41.8792,
                  "id":144,
                  "name":"",
                  "opacity":1,
@@ -357,7 +357,7 @@
                  "y":-559.5
                 }, 
                 {
-                 "height":69.907197416697,
+                 "height":69.9072,
                  "id":145,
                  "name":"",
                  "opacity":1,
@@ -366,12 +366,12 @@
                  "visible":true,
                  "width":40,
                  "x":3480.25,
-                 "y":-547.022727272727
+                 "y":-547.023
                 }, 
                 {
                  "height":18.25,
                  "id":436,
-                 "name":"P4",
+                 "name":"PIN4",
                  "opacity":1,
                  "rotation":0,
                  "type":"",
@@ -402,7 +402,55 @@
          "draworder":"topdown",
          "id":8,
          "name":"Interactuable-Piso",
-         "objects":[],
+         "objects":[
+                {
+                 "height":20.5,
+                 "id":476,
+                 "name":"11",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":20,
+                 "x":3570.27272727273,
+                 "y":-162.75
+                }, 
+                {
+                 "height":20.5,
+                 "id":477,
+                 "name":"22",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":20,
+                 "x":3649.33333333333,
+                 "y":-291.25
+                }, 
+                {
+                 "height":20.5,
+                 "id":478,
+                 "name":"14",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":20,
+                 "x":3495,
+                 "y":-452.583333333333
+                }, 
+                {
+                 "height":20.5,
+                 "id":479,
+                 "name":"24",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":20,
+                 "x":3568.66666666667,
+                 "y":-549.583333333333
+                }],
          "opacity":1,
          "type":"objectgroup",
          "visible":true,
@@ -432,7 +480,7 @@
          "y":0
         }],
  "nextlayerid":15,
- "nextobjectid":476,
+ "nextobjectid":480,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",

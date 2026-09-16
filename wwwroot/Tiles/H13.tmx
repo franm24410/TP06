@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="26" height="15" tilewidth="20" tileheight="20" infinite="1" nextlayerid="15" nextobjectid="476">
+<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="26" height="15" tilewidth="20" tileheight="20" infinite="1" nextlayerid="15" nextobjectid="478">
  <tileset firstgid="1" source="bg_ruinseasynam2.tsx"/>
  <tileset firstgid="73" source="bg_ruinseasynam3.tsx"/>
  <tileset firstgid="447" source="bg_tundratiles.tsx"/>
@@ -78,7 +78,10 @@
   <object id="154" x="3881" y="-821" width="79" height="45"/>
   <object id="157" x="3519" y="-860.5" width="362" height="44.5"/>
  </objectgroup>
- <objectgroup id="8" name="Interactuable-Piso"/>
+ <objectgroup id="8" name="Interactuable-Piso">
+  <object id="476" name="23" x="3569" y="-663.25" width="20" height="20.5"/>
+  <object id="477" name="26" x="3921.67" y="-751.917" width="20" height="20.5"/>
+ </objectgroup>
  <objectgroup id="10" name="Interactuable-Pared" visible="0"/>
  <objectgroup id="12" name="ObjetoMovible" visible="0"/>
 </map>
