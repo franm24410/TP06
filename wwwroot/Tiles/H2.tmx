@@ -131,7 +131,7 @@
   <object id="75" x="1435.5" y="119" width="4" height="409.5"/>
   <object id="82" x="2061" y="300" width="39.6667" height="59"/>
   <object id="85" x="1981.33" y="300.333" width="37.3333" height="58.6667"/>
-  <object id="326" name="PI1" x="2329.96" y="490"/>
+  <object id="326" name="PI1" x="2329.91" y="483.682"/>
   <object id="384" x="1438.92" y="120.667" width="440.833" height="43"/>
   <object id="429" x="2180.25" y="340" width="259.75" height="44.3333"/>
   <object id="439" x="2060" y="279.5" width="5.25" height="21.5"/>
@@ -140,7 +140,7 @@
  </objectgroup>
  <objectgroup id="8" name="Interactuable-Piso">
   <object id="308" name="RB1" x="2269.5" y="410.25"/>
-  <object id="314" name="PUZ1" x="2340" y="420">
+  <object id="314" name="PUZ1" x="2339.91" y="419.902">
    <polygon points="0,0 40,0 40,80 20,80 20,60 0,60 0,80 -40,80 -40,60 -20,60 -20,40 -40,40 -40,60 -60,60 -60,0 -20,0 -20,20 0,20"/>
   </object>
   <object id="387" name="TB1" x="1642" y="227" width="16" height="12"/>

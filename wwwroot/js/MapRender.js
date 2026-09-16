@@ -1,8 +1,11 @@
 // mapRender.js — versión MULTI-MAPA
 // Puertas: capa Doors, nombre phX + propiedad targetMap (aparecés en el objeto "X").
 // Carteles: C1..C10 en "Interactuable-Pared" (E para leer).
+// Puzzle de botones: TB1..TB12 con secuencias de 2 en orden (5s de bloqueo).
 // Puzzle de piedras: PIx empujables, encerradas en polígonos PUZx, objetivos PLx,
 // botón de reset RBx (solo funciona si el puzzle no está completado).
+// Piedras: miden media tile, hitbox == sprite, se mueven por el centro de los
+// bloques y se recentran solas al bloque donde está su mayor parte.
 
 const MAPS_FOLDER = "/Tiles/";
 const MAP_EXT = ".tmj";
@@ -13,6 +16,7 @@ let currentMapName = null;
 let TILE_W = 20;
 let TILE_H = 20;
 
+// Límites REALES del contenido del mapa (se calculan desde los tiles decodificados)
 let worldBounds = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
 
 // ---------------------------------------------------------------------
@@ -106,7 +110,7 @@ function loadImages() {
 }
 
 // ---------------------------------------------------------------------
-// 2. DECODIFICAR CAPAS
+// 2. DECODIFICAR CAPAS (soporta chunks base64, base64 entero y CSV)
 // ---------------------------------------------------------------------
 const FLIP_MASK = 0x1FFFFFFF;
 
@@ -170,6 +174,7 @@ function decodeAllLayers() {
   }
 }
 
+// Límites reales del contenido (para la cámara), aunque el mapa esté lejos del (0,0)
 function computeWorldBounds() {
   let minTX = Infinity, minTY = Infinity, maxTX = -Infinity, maxTY = -Infinity;
 
@@ -484,10 +489,12 @@ function checkButtons(player) {
     if (!rectsOverlap(player, button)) continue;
 
     const nombreBoton = button.name;
+    // 🔒 Solo cuentan como botón los objetos llamados TB1, TB2, ... TB12
     if (!/^TB\d+$/i.test(nombreBoton)) continue;
     const numeroBoton = parseInt(nombreBoton.replace(/^TB/i, ""), 10);
     if (isNaN(numeroBoton)) continue;
 
+    // 🔒 Botón bloqueado: si está prendido (lo tocaste hace menos de 5s), se ignora
     if (isButtonActive(nombreBoton)) continue;
 
     if (!puzzleCompletado) {
@@ -576,6 +583,9 @@ function drawButtonOverlays(ctx, canvas, camera) {
 
 // ---------------------------------------------------------------------
 // 6. PUZZLE DE PIEDRAS (PIx empujables, PUZx cerco, PLx objetivo, RBx reset)
+// Reglas: la piedra mide medio tile, su hitbox == su sprite, se mueve solo
+// por el centro de los bloques, y si queda descentrada se recentra sola al
+// bloque donde está la mayor parte de su área.
 // ---------------------------------------------------------------------
 let stones = [];          // piedras runtime (con posición viva)
 let stoneTargets = [];    // hitboxes PLx
@@ -585,7 +595,39 @@ let rbStepped = new Set();
 
 const PIEDRA_VELOCIDAD = 5; // px por frame mientras desliza
 
+// La piedra ocupa LA MITAD de un tile (10x10 si el tile es 20x20).
+// Si querés otro tamaño, cambiá solo esta función.
+function piedraSize() {
+  return TILE_W / 2;
+}
+
 let piImage = null;
+
+// Bloque "dueño" de un punto: el que contiene su centro. Si el centro cae
+// JUSTO sobre una línea de bloques, desempata hacia arriba/izquierda
+// (así un rect par no manda la piedra un bloque abajo/abajo-derecha).
+function tileOwner(v, tileSize) {
+  return Math.floor((v - 0.001) / tileSize);
+}
+
+function snapStoneToGrid(s) {
+  const tam = s.width;
+  const cx = s.x + tam / 2;
+  const cy = s.y + tam / 2;
+  const tileX = tileOwner(cx, TILE_W);
+  const tileY = tileOwner(cy, TILE_H);
+
+  const antesX = s.x;
+  const antesY = s.y;
+
+  s.x = tileX * TILE_W + (TILE_W - tam) / 2;
+  s.y = tileY * TILE_H + (TILE_H - tam) / 2;
+
+  if (s.arenaPoints && (!stoneInArena(s, s.arenaPoints) || hitsOtherStone(s, s))) {
+    s.x = antesX;
+    s.y = antesY;
+  }
+}
 
 function initStoneObjects() {
   stones = [];
@@ -608,7 +650,25 @@ function initStoneObjects() {
     }
   }
 
-  const arenaFor = (x, y) => arenas.find(a => pointInPolygon(x, y, a.points)) || null;
+  function arenaFor(x, y) {
+    const byPoint = arenas.find(a => pointInPolygon(x, y, a.points));
+    if (byPoint) return byPoint;
+
+    // Respaldo: polígono cuyo rectángulo envolvente contiene el punto
+    // (salva polígonos dibujados raros o con giro raro en Tiled)
+    const byBox = arenas.find(a => {
+      const xs = a.points.map(p => p.x);
+      const ys = a.points.map(p => p.y);
+      return x >= Math.min(...xs) && x <= Math.max(...xs) &&
+             y >= Math.min(...ys) && y <= Math.max(...ys);
+    });
+    if (byBox) {
+      console.warn(`⚠️ Arena asignada por bounding box (revisá el polígono PUZ${byBox.num} en Tiled)`);
+    }
+    return byBox || null;
+  }
+
+  const tam = piedraSize();
 
   // 2) Piedras, objetivos y botones de reset
   for (const layer of mapData.layers) {
@@ -617,6 +677,7 @@ function initStoneObjects() {
       if (!obj.name) continue;
 
       if (/^PI\d+$/i.test(obj.name)) {
+        // El rect de Tiled solo marca posición: se usa su centro
         const cx = obj.x + (obj.width || TILE_W) / 2;
         const cy = obj.y + (obj.height || TILE_H) / 2;
         const arena = arenaFor(cx, cy);
@@ -625,20 +686,27 @@ function initStoneObjects() {
           console.warn(`La piedra ${obj.name} no está dentro de ningún polígono PUZx: queda fija.`);
         }
 
-        stones.push({
+        const s = {
           name: obj.name,
           num: parseInt(obj.name.replace(/^PI/i, ""), 10),
-          x: obj.x,
-          y: obj.y,
-          width: obj.width || TILE_W,
-          height: obj.height || TILE_H,
-          initX: obj.x,
-          initY: obj.y,
+          x: cx - tam / 2,
+          y: cy - tam / 2,
+          width: tam,
+          height: tam,
+          initX: 0,
+          initY: 0,
           puzzle: arena ? arena.num : null,
           arenaPoints: arena ? arena.points : null,
           locked: false,
           sliding: null,
-        });
+        };
+
+        // Al aparecer: centrada en el bloque donde está su mayor parte
+        snapStoneToGrid(s);
+        s.initX = s.x;
+        s.initY = s.y;
+
+        stones.push(s);
       }
       else if (/^PL\d+$/i.test(obj.name)) {
         const cx = obj.x + (obj.width || TILE_W) / 2;
@@ -680,16 +748,20 @@ function initStoneObjects() {
   }
 }
 
-// ¿El rectángulo de la piedra sigue completamente dentro de su arena?
+// ¿El rectángulo de la piedra sigue dentro de su arena?
+// Primero prueba con las 4 esquinas; si el polígono es muy ajustado a los
+// bordes, deja moverse mientras el CENTRO siga adentro.
 function stoneInArena(rect, arenaPoints) {
   if (!arenaPoints) return false;
   const m = 1;
-  return (
+  const cornersOK =
     pointInPolygon(rect.x + m, rect.y + m, arenaPoints) &&
     pointInPolygon(rect.x + rect.width - m, rect.y + m, arenaPoints) &&
     pointInPolygon(rect.x + m, rect.y + rect.height - m, arenaPoints) &&
-    pointInPolygon(rect.x + rect.width - m, rect.y + rect.height - m, arenaPoints)
-  );
+    pointInPolygon(rect.x + rect.width - m, rect.y + rect.height - m, arenaPoints);
+  if (cornersOK) return true;
+
+  return pointInPolygon(rect.x + rect.width / 2, rect.y + rect.height / 2, arenaPoints);
 }
 
 function hitsOtherStone(stone, rect) {
@@ -715,11 +787,12 @@ function stepStone(s) {
     const ny = s.y + dir.dy;
     const test = { x: nx, y: ny, width: s.width, height: s.height };
 
-    // ¿Llegó a un objetivo? Se traba para siempre ahí
+    // ¿Llegó a un objetivo? Se traba para siempre ahí, centrada en un bloque
     const target = findFreeTarget(s, test);
     if (target) {
       s.x = target.x + target.width / 2 - s.width / 2;
       s.y = target.y + target.height / 2 - s.height / 2;
+      snapStoneToGrid(s);
       s.locked = true;
       s.sliding = null;
       target.occupied = true;
@@ -728,9 +801,11 @@ function stepStone(s) {
       return;
     }
 
-    // ¿Borde del polígono u otra piedra? Frena sin avanzar
+    // ¿Borde del polígono u otra piedra? Frena y se recentra al bloque
     if (!stoneInArena(test, s.arenaPoints) || hitsOtherStone(s, test)) {
+      console.log(`🛑 ${s.name} frenó (borde del polígono u otra piedra)`);
       s.sliding = null;
+      snapStoneToGrid(s);
       return;
     }
 
@@ -742,13 +817,28 @@ function stepStone(s) {
 
 // Empuje + deslizamiento. Llamar cada frame con el dx/dy del jugador.
 function updatePiedras(player, dx, dy) {
+  // 0) Red de seguridad: toda piedra quieta y destrabada debe estar centrada
+  for (const s of stones) {
+    if (s.sliding || s.locked) continue;
+    const cx = s.x + s.width / 2;
+    const cy = s.y + s.height / 2;
+    const tileCX = tileOwner(cx, TILE_W) * TILE_W + TILE_W / 2;
+    const tileCY = tileOwner(cy, TILE_H) * TILE_H + TILE_H / 2;
+    if (Math.abs(cx - tileCX) > 0.5 || Math.abs(cy - tileCY) > 0.5) {
+      snapStoneToGrid(s);
+    }
+  }
+
   // 1) Arrancar un empuje si el jugador está contra una piedra y camina hacia ella
   if (dx !== 0 || dy !== 0) {
+    // Margen generoso: la piedra es chica y el jugador puede quedar
+    // separado por unos px al chocar contra ella
+    const margen = 6;
     const expanded = {
-      x: player.x - 2,
-      y: player.y - 2,
-      width: player.width + 4,
-      height: player.height + 4,
+      x: player.x - margen,
+      y: player.y - margen,
+      width: player.width + margen * 2,
+      height: player.height + margen * 2,
     };
 
     for (const s of stones) {
@@ -771,6 +861,7 @@ function updatePiedras(player, dx, dy) {
 
       if (dirX !== 0 || dirY !== 0) {
         s.sliding = { dx: dirX, dy: dirY };
+        console.log(`🪨 Empuje ${s.name} ->`, dirX, dirY);
       }
     }
   }
@@ -832,13 +923,12 @@ function checkResetButtons(player) {
   rbStepped = touched;
 }
 
-// Dibuja las piedras en su posición ACTUAL (ya no en la posición de Tiled)
+// Dibuja las piedras PEGADAS a su hitbox: mismo rectángulo exacto,
+// sin offsets. Lo que ves es exactamente lo que choca.
 function drawPIOverlays(ctx, canvas, camera) {
   if (!piImage || !piImage.complete || piImage.failed) return;
 
   const recortes = (typeof PI_RECORTES !== "undefined") ? PI_RECORTES : {};
-  const dx0 = (typeof PI_DX !== "undefined") ? PI_DX : 0;
-  const dy0 = (typeof PI_DY !== "undefined") ? PI_DY : -6;
 
   for (const s of stones) {
     const r = recortes[s.name] || recortes["*"];
@@ -846,10 +936,14 @@ function drawPIOverlays(ctx, canvas, camera) {
 
     const sx = r[0], sy = r[1], sw = r[2], sh = r[3];
 
-    const destX = Math.round(s.x + s.width / 2 - sw / 2 + dx0 - camera.x);
-    const destY = Math.round(s.y + s.height / 2 - sh / 2 + dy0 - camera.y);
-
-    ctx.drawImage(piImage, sx, sy, sw, sh, destX, destY, sw, sh);
+    ctx.drawImage(
+      piImage,
+      sx, sy, sw, sh,
+      Math.round(s.x - camera.x),
+      Math.round(s.y - camera.y),
+      s.width,
+      s.height
+    );
   }
 }
 
@@ -990,7 +1084,12 @@ async function loadMap(mapName) {
 
 function initMapObjects() {
   const wallsLayer = mapData.layers.find(l => l.name === "Interactuable");
-  wallObjects = wallsLayer ? wallsLayer.objects : [];
+  // 🪨 Excluye objetos de puzzle (PI/PL/RB/PUZ) que estén en esta capa:
+  // NO son paredes, tienen su propia lógica (si no, la hitbox de la piedra
+  // deja una pared fantasma fija que traba todo).
+  wallObjects = wallsLayer
+    ? wallsLayer.objects.filter(o => !o.name || !/^(PI|PL|RB|PUZ)\d+$/i.test(o.name))
+    : [];
 
   const doorsLayer = mapData.layers.find(l => l.name === "Doors");
   doors = doorsLayer ? doorsLayer.objects : [];

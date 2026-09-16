@@ -276,6 +276,7 @@ function update(deltaTime) {
 
     moveWithWallCollision(player, dx, dy);
 
+    // 🪨 Piedras: empuje + deslizamiento, y botones de reset RBx
     updatePiedras(player, dx, dy);
     checkResetButtons(player);
 
@@ -299,7 +300,7 @@ function draw() {
     // 1b. Botones del puzzle prendidos
     drawButtonOverlays(ctx, canvas, camera);
 
-    // 1c. Recortes de imagen debajo de los objetos PIx
+    // 1c. Piedras del puzzle (posición viva, pegadas a su hitbox)
     drawPIOverlays(ctx, canvas, camera);
 
     // 2. Personaje
