@@ -276,6 +276,9 @@ function update(deltaTime) {
 
     moveWithWallCollision(player, dx, dy);
 
+    updatePiedras(player, dx, dy);
+    checkResetButtons(player);
+
     const moviendose = actualizarDireccion();
 
     actualizarFrame(deltaTime, moviendose);

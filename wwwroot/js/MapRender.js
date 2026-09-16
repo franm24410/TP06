@@ -1,7 +1,8 @@
-// mapRender.js — versión MULTI-MAPA con cuadrados de aparición y carteles
-// Puertas: capa Doors, nombre phX + propiedad targetMap.
-// Al pasar por phX, el jugador aparece en el objeto llamado "X" del mapa destino.
-// Carteles: objetos C1..C10 en la capa "Interactuable-Pared".
+// mapRender.js — versión MULTI-MAPA
+// Puertas: capa Doors, nombre phX + propiedad targetMap (aparecés en el objeto "X").
+// Carteles: C1..C10 en "Interactuable-Pared" (E para leer).
+// Puzzle de piedras: PIx empujables, encerradas en polígonos PUZx, objetivos PLx,
+// botón de reset RBx (solo funciona si el puzzle no está completado).
 
 const MAPS_FOLDER = "/Tiles/";
 const MAP_EXT = ".tmj";
@@ -12,7 +13,6 @@ let currentMapName = null;
 let TILE_W = 20;
 let TILE_H = 20;
 
-// Límites REALES del contenido del mapa (se calculan desde los tiles decodificados)
 let worldBounds = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
 
 // ---------------------------------------------------------------------
@@ -106,7 +106,7 @@ function loadImages() {
 }
 
 // ---------------------------------------------------------------------
-// 2. DECODIFICAR CAPAS (soporta chunks base64, base64 entero y CSV)
+// 2. DECODIFICAR CAPAS
 // ---------------------------------------------------------------------
 const FLIP_MASK = 0x1FFFFFFF;
 
@@ -227,13 +227,39 @@ function findObjectByName(name) {
   return null;
 }
 
+function getAbsolutePoints(obj) {
+  if (obj.polygon) {
+    return obj.polygon.map(p => ({ x: obj.x + p.x, y: obj.y + p.y }));
+  }
+  return [
+    { x: obj.x, y: obj.y },
+    { x: obj.x + obj.width, y: obj.y },
+    { x: obj.x + obj.width, y: obj.y + obj.height },
+    { x: obj.x, y: obj.y + obj.height },
+  ];
+}
+
+function pointInPolygon(px, py, points) {
+  let inside = false;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+    const xi = points[i].x, yi = points[i].y;
+    const xj = points[j].x, yj = points[j].y;
+    const intersect = ((yi > py) !== (yj > py)) &&
+      (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
 // ---------------------------------------------------------------------
-// 3. COLISIÓN DE PAREDES (capa Interactuable)
+// 3. COLISIÓN DE PAREDES (capa Interactuable) + PIEDRAS (bloquean al jugador)
 // ---------------------------------------------------------------------
 let wallObjects = [];
 
 function rectHitsWall(rect) {
-  return wallObjects.some(obj => rectsOverlap(rect, obj));
+  if (wallObjects.some(obj => rectsOverlap(rect, obj))) return true;
+  // Las piedras (se muevan o no) también bloquean al jugador
+  return stones.some(s => rectsOverlap(rect, s));
 }
 
 function moveWithWallCollision(player, dx, dy) {
@@ -458,12 +484,10 @@ function checkButtons(player) {
     if (!rectsOverlap(player, button)) continue;
 
     const nombreBoton = button.name;
-    // 🔒 Solo cuentan como botón los objetos llamados TB1, TB2, ... TB12
     if (!/^TB\d+$/i.test(nombreBoton)) continue;
     const numeroBoton = parseInt(nombreBoton.replace(/^TB/i, ""), 10);
     if (isNaN(numeroBoton)) continue;
 
-    // 🔒 Botón bloqueado: si está prendido (lo tocaste hace menos de 5s), se ignora
     if (isButtonActive(nombreBoton)) continue;
 
     if (!puzzleCompletado) {
@@ -551,23 +575,100 @@ function drawButtonOverlays(ctx, canvas, camera) {
 }
 
 // ---------------------------------------------------------------------
-// 6. OBJETOS PIx — recorte de imagen debajo del objeto
+// 6. PUZZLE DE PIEDRAS (PIx empujables, PUZx cerco, PLx objetivo, RBx reset)
 // ---------------------------------------------------------------------
-let piObjects = [];
+let stones = [];          // piedras runtime (con posición viva)
+let stoneTargets = [];    // hitboxes PLx
+let resetButtons = [];    // botones RBx
+let puzzlePiedraCompletado = {};
+let rbStepped = new Set();
+
+const PIEDRA_VELOCIDAD = 5; // px por frame mientras desliza
+
 let piImage = null;
 
-function initPIObjects() {
-  piObjects = [];
+function initStoneObjects() {
+  stones = [];
+  stoneTargets = [];
+  resetButtons = [];
+  puzzlePiedraCompletado = {};
+  rbStepped = new Set();
 
+  // 1) Juntar los polígonos/rects PUZx (arenas)
+  const arenas = [];
   for (const layer of mapData.layers) {
     if (layer.type !== "objectgroup") continue;
     for (const obj of layer.objects || []) {
-      if (obj.name && /^PI\d+$/i.test(obj.name)) {
-        piObjects.push(obj);
+      if (obj.name && /^PUZ\d+$/i.test(obj.name)) {
+        arenas.push({
+          num: parseInt(obj.name.replace(/^PUZ/i, ""), 10),
+          points: getAbsolutePoints(obj),
+        });
       }
     }
   }
 
+  const arenaFor = (x, y) => arenas.find(a => pointInPolygon(x, y, a.points)) || null;
+
+  // 2) Piedras, objetivos y botones de reset
+  for (const layer of mapData.layers) {
+    if (layer.type !== "objectgroup") continue;
+    for (const obj of layer.objects || []) {
+      if (!obj.name) continue;
+
+      if (/^PI\d+$/i.test(obj.name)) {
+        const cx = obj.x + (obj.width || TILE_W) / 2;
+        const cy = obj.y + (obj.height || TILE_H) / 2;
+        const arena = arenaFor(cx, cy);
+
+        if (!arena) {
+          console.warn(`La piedra ${obj.name} no está dentro de ningún polígono PUZx: queda fija.`);
+        }
+
+        stones.push({
+          name: obj.name,
+          num: parseInt(obj.name.replace(/^PI/i, ""), 10),
+          x: obj.x,
+          y: obj.y,
+          width: obj.width || TILE_W,
+          height: obj.height || TILE_H,
+          initX: obj.x,
+          initY: obj.y,
+          puzzle: arena ? arena.num : null,
+          arenaPoints: arena ? arena.points : null,
+          locked: false,
+          sliding: null,
+        });
+      }
+      else if (/^PL\d+$/i.test(obj.name)) {
+        const cx = obj.x + (obj.width || TILE_W) / 2;
+        const cy = obj.y + (obj.height || TILE_H) / 2;
+        const arena = arenaFor(cx, cy);
+
+        stoneTargets.push({
+          name: obj.name,
+          x: obj.x,
+          y: obj.y,
+          width: obj.width || TILE_W,
+          height: obj.height || TILE_H,
+          puzzle: arena ? arena.num : null,
+          occupied: false,
+        });
+      }
+      else if (/^RB\d+$/i.test(obj.name)) {
+        resetButtons.push({
+          name: obj.name,
+          num: parseInt(obj.name.replace(/^RB/i, ""), 10),
+          x: obj.x,
+          y: obj.y,
+          width: obj.width || TILE_W,
+          height: obj.height || TILE_H,
+        });
+      }
+    }
+  }
+
+  // Imagen de las piedras (recorte de piConfig)
   const ruta = (typeof PI_IMAGEN !== "undefined" && PI_IMAGEN) ? PI_IMAGEN : null;
   if (ruta && !piImage) {
     piImage = new Image();
@@ -579,6 +680,159 @@ function initPIObjects() {
   }
 }
 
+// ¿El rectángulo de la piedra sigue completamente dentro de su arena?
+function stoneInArena(rect, arenaPoints) {
+  if (!arenaPoints) return false;
+  const m = 1;
+  return (
+    pointInPolygon(rect.x + m, rect.y + m, arenaPoints) &&
+    pointInPolygon(rect.x + rect.width - m, rect.y + m, arenaPoints) &&
+    pointInPolygon(rect.x + m, rect.y + rect.height - m, arenaPoints) &&
+    pointInPolygon(rect.x + rect.width - m, rect.y + rect.height - m, arenaPoints)
+  );
+}
+
+function hitsOtherStone(stone, rect) {
+  return stones.some(o => o !== stone && rectsOverlap(rect, o));
+}
+
+// Objetivo libre (PL del mismo puzzle, sin ocupar) que pisa el rect
+function findFreeTarget(stone, rect) {
+  return stoneTargets.find(t =>
+    t.puzzle === stone.puzzle &&
+    !t.occupied &&
+    rectsOverlap(rect, t)
+  ) || null;
+}
+
+// Avanza la piedra que está deslizando, de a 1px, hasta que frena
+function stepStone(s) {
+  const dir = s.sliding;
+  let moved = 0;
+
+  while (moved < PIEDRA_VELOCIDAD) {
+    const nx = s.x + dir.dx;
+    const ny = s.y + dir.dy;
+    const test = { x: nx, y: ny, width: s.width, height: s.height };
+
+    // ¿Llegó a un objetivo? Se traba para siempre ahí
+    const target = findFreeTarget(s, test);
+    if (target) {
+      s.x = target.x + target.width / 2 - s.width / 2;
+      s.y = target.y + target.height / 2 - s.height / 2;
+      s.locked = true;
+      s.sliding = null;
+      target.occupied = true;
+      console.log(`🪨 ${s.name} llegó a ${target.name} y quedó trabada`);
+      checkPiedrasPuzzle(s.puzzle);
+      return;
+    }
+
+    // ¿Borde del polígono u otra piedra? Frena sin avanzar
+    if (!stoneInArena(test, s.arenaPoints) || hitsOtherStone(s, test)) {
+      s.sliding = null;
+      return;
+    }
+
+    s.x = nx;
+    s.y = ny;
+    moved++;
+  }
+}
+
+// Empuje + deslizamiento. Llamar cada frame con el dx/dy del jugador.
+function updatePiedras(player, dx, dy) {
+  // 1) Arrancar un empuje si el jugador está contra una piedra y camina hacia ella
+  if (dx !== 0 || dy !== 0) {
+    const expanded = {
+      x: player.x - 2,
+      y: player.y - 2,
+      width: player.width + 4,
+      height: player.height + 4,
+    };
+
+    for (const s of stones) {
+      if (s.locked || s.sliding || !s.arenaPoints) continue;
+      if (!rectsOverlap(expanded, s)) continue;
+
+      let dirX = 0, dirY = 0;
+
+      if (dx !== 0) {
+        const centroPlayer = player.x + player.width / 2;
+        const centroStone = s.x + s.width / 2;
+        const hacia = (dx > 0) ? (centroStone >= centroPlayer) : (centroStone <= centroPlayer);
+        if (hacia) dirX = Math.sign(dx);
+      } else if (dy !== 0) {
+        const centroPlayer = player.y + player.height / 2;
+        const centroStone = s.y + s.height / 2;
+        const hacia = (dy > 0) ? (centroStone >= centroPlayer) : (centroStone <= centroPlayer);
+        if (hacia) dirY = Math.sign(dy);
+      }
+
+      if (dirX !== 0 || dirY !== 0) {
+        s.sliding = { dx: dirX, dy: dirY };
+      }
+    }
+  }
+
+  // 2) Mover las que ya están deslizando
+  for (const s of stones) {
+    if (s.sliding) stepStone(s);
+  }
+}
+
+function checkPiedrasPuzzle(num) {
+  const piedras = stones.filter(s => s.puzzle === num);
+  if (piedras.length === 0) return;
+
+  if (piedras.every(s => s.locked)) {
+    puzzlePiedraCompletado[num] = true;
+    console.log(`🎉 Puzzle PUZ${num} completado`);
+  }
+}
+
+function resetPiedrasPuzzle(num) {
+  for (const s of stones) {
+    if (s.puzzle !== num) continue;
+    s.x = s.initX;
+    s.y = s.initY;
+    s.locked = false;
+    s.sliding = null;
+  }
+  for (const t of stoneTargets) {
+    if (t.puzzle === num) t.occupied = false;
+  }
+  puzzlePiedraCompletado[num] = false;
+}
+
+// Botones RBx: reinician el puzzle x, SOLO si no está completado
+function checkResetButtons(player) {
+  if (isTransitioning()) return;
+
+  const touched = new Set();
+  for (const rb of resetButtons) {
+    if (rectsOverlap(player, rb)) touched.add(rb.name);
+  }
+
+  for (const name of touched) {
+    if (rbStepped.has(name)) continue;
+
+    const rb = resetButtons.find(r => r.name === name);
+    if (!rb || isNaN(rb.num)) continue;
+
+    if (puzzlePiedraCompletado[rb.num]) {
+      console.log(`⛔ RB${rb.num}: el puzzle PUZ${rb.num} ya está completado, no se reinicia`);
+      continue;
+    }
+
+    resetPiedrasPuzzle(rb.num);
+    console.log(`🔄 Puzzle PUZ${rb.num} reiniciado desde 0`);
+  }
+
+  rbStepped = touched;
+}
+
+// Dibuja las piedras en su posición ACTUAL (ya no en la posición de Tiled)
 function drawPIOverlays(ctx, canvas, camera) {
   if (!piImage || !piImage.complete || piImage.failed) return;
 
@@ -586,14 +840,14 @@ function drawPIOverlays(ctx, canvas, camera) {
   const dx0 = (typeof PI_DX !== "undefined") ? PI_DX : 0;
   const dy0 = (typeof PI_DY !== "undefined") ? PI_DY : -6;
 
-  for (const obj of piObjects) {
-    const r = recortes[obj.name] || recortes["*"];
+  for (const s of stones) {
+    const r = recortes[s.name] || recortes["*"];
     if (!r) continue;
 
     const sx = r[0], sy = r[1], sw = r[2], sh = r[3];
 
-    const destX = Math.round(obj.x + obj.width / 2 - sw / 2 + dx0 - camera.x);
-    const destY = Math.round(obj.y + obj.height + dy0 - camera.y);
+    const destX = Math.round(s.x + s.width / 2 - sw / 2 + dx0 - camera.x);
+    const destY = Math.round(s.y + s.height / 2 - sh / 2 + dy0 - camera.y);
 
     ctx.drawImage(piImage, sx, sy, sw, sh, destX, destY, sw, sh);
   }
@@ -617,8 +871,6 @@ function initSignObjects() {
   }
 }
 
-// Devuelve el cartel que el jugador está tocando (con margen de 8px),
-// o null si no hay ninguno. El texto sale de CARTELES_TEXTOS (cartelesConfig.js).
 function getSignAtPlayer(player) {
   const hit = {
     x: player.x - 8,
@@ -722,7 +974,7 @@ async function loadMap(mapName) {
   for (const k in decodedLayers) delete decodedLayers[k];
 
   initMapObjects();
-  initPIObjects();
+  initStoneObjects();
   initSignObjects();
   buildTilesetRanges();
   decodeAllLayers();
