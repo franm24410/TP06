@@ -1,6 +1,7 @@
 ﻿const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
+
 let player = {
     x: 1550,
     y: 740,
@@ -45,6 +46,14 @@ function cerrarSignGui() {
     signGuiAbierta = false;
 }
 
+// Convierte la dirección que mira el personaje en un vector
+function dirDesdeDireccion(d) {
+    if (d === "up") return { x: 0, y: -1 };
+    if (d === "down") return { x: 0, y: 1 };
+    if (d === "left") return { x: -1, y: 0 };
+    return { x: 1, y: 0 };
+}
+
 // ---------------------------------------------------------------------
 // TECLADO
 // ---------------------------------------------------------------------
@@ -60,11 +69,19 @@ document.addEventListener("keydown", function(event) {
         return;
     }
 
-    // Con E: lee el cartel que estés tocando
+    // Con E: primero cartel, después empuje de piedra
     if (tecla === "e") {
+        // 1) ¿Hay un cartel acá? -> se lee
         const cartel = getSignAtPlayer(player);
         if (cartel) {
             abrirSignGui(cartel.texto);
+            event.preventDefault();
+            return;
+        }
+
+        // 2) ¿Hay una piedra tocándome hacia donde miro? -> se empuja
+        const d = dirDesdeDireccion(direccionActual);
+        if (empujarPiedra(player, d.x, d.y)) {
             event.preventDefault();
             return;
         }
@@ -276,8 +293,9 @@ function update(deltaTime) {
 
     moveWithWallCollision(player, dx, dy);
 
-    // 🪨 Piedras: empuje + deslizamiento, y botones de reset RBx
-    updatePiedras(player, dx, dy);
+    // 🪨 Piedras: centrado de seguridad + deslizamiento.
+    // El empuje ahora es MANUAL con la tecla E (empujarPiedra en el keydown).
+    updatePiedras(player);
     checkResetButtons(player);
 
     const moviendose = actualizarDireccion();

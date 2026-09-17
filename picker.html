@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Picker de recortes</title>
+<style>
+  body { background:#222; color:#eee; font-family:monospace; margin:20px; }
+  #wrap { position:relative; display:inline-block; cursor:crosshair; }
+  #img { display:block; image-rendering:pixelated; }
+  #sel { position:absolute; border:1px solid lime; background:rgba(0,255,0,.25); pointer-events:none; display:none; }
+  #out { margin-top:10px; font-size:16px; color:#8f8; }
+  button { margin:4px; padding:6px 12px; }
+</style>
+</head>
+<body>
+<h3>Picker de recortes — arrastrá un rectángulo sobre la imagen</h3>
+<input type="file" id="file" accept="image/*">
+<label> Zoom:
+  <select id="zoom">
+    <option>1</option><option>2</option><option selected>4</option><option>8</option><option>12</option>
+  </select>
+</label>
+<br><br>
+<div id="wrap">
+  <img id="img">
+  <div id="sel"></div>
+</div>
+<div id="out">Cargá la imagen y arrastrá encima el cuadradito que querés mostrar.</div>
+<button id="copy">Copiar coordenadas</button>
+
+<script>
+const img = document.getElementById("img");
+const wrap = document.getElementById("wrap");
+const sel = document.getElementById("sel");
+const out = document.getElementById("out");
+let zoom = 4, startX = 0, startY = 0, dragging = false, rect = null;
+
+document.getElementById("file").onchange = e => {
+  const f = e.target.files[0];
+  if (f) img.src = URL.createObjectURL(f);
+};
+document.getElementById("zoom").onchange = e => {
+  zoom = parseInt(e.target.value);
+  applyZoom();
+};
+function applyZoom() {
+  if (!img.naturalWidth) return;
+  img.style.width  = (img.naturalWidth  * zoom) + "px";
+  img.style.height = (img.naturalHeight * zoom) + "px";
+  if (rect) paintSel();
+}
+img.onload = applyZoom;
+
+wrap.addEventListener("mousedown", e => {
+  const r = wrap.getBoundingClientRect();
+  startX = (e.clientX - r.left) / zoom;
+  startY = (e.clientY - r.top) / zoom;
+  dragging = true;
+});
+window.addEventListener("mousemove", e => {
+  if (!dragging) return;
+  const r = wrap.getBoundingClientRect();
+  const cx = (e.clientX - r.left) / zoom;
+  const cy = (e.clientY - r.top) / zoom;
+  rect = {
+    sx: Math.floor(Math.min(startX, cx)),
+    sy: Math.floor(Math.min(startY, cy)),
+    sw: Math.max(1, Math.ceil(Math.abs(cx - startX))),
+    sh: Math.max(1, Math.ceil(Math.abs(cy - startY)))
+  };
+  paintSel();
+  show();
+});
+window.addEventListener("mouseup", () => dragging = false);
+
+function paintSel() {
+  sel.style.display = "block";
+  sel.style.left   = (rect.sx * zoom) + "px";
+  sel.style.top    = (rect.sy * zoom) + "px";
+  sel.style.width  = (rect.sw * zoom) + "px";
+  sel.style.height = (rect.sh * zoom) + "px";
+}
+function show() {
+  out.textContent = `sx: ${rect.sx}, sy: ${rect.sy}, sw: ${rect.sw}, sh: ${rect.sh}   →   [${rect.sx}, ${rect.sy}, ${rect.sw}, ${rect.sh}]`;
+}
+document.getElementById("copy").onclick = () => {
+  if (!rect) return;
+  const txt = `[${rect.sx}, ${rect.sy}, ${rect.sw}, ${rect.sh}]`;
+  navigator.clipboard.writeText(txt);
+  out.textContent = "✅ Copiado: " + txt;
+};
+</script>
+</body>
+</html>

@@ -1,13 +1,11 @@
 // mapRender.js — versión MULTI-MAPA
 // Puertas: capa Doors, nombre phX + propiedad targetMap (aparecés en el objeto "X").
 // Carteles: C1..C10 en "Interactuable-Pared" (E para leer).
-// Puzzle de botones: TB1..TB12 con secuencias de 2 en orden (5s de bloqueo).
-// Puzzle de piedras: PIx empujables, encerradas en polígonos PUZx, objetivos PLx,
-// botón de reset RBx (solo funciona si el puzzle no está completado).
-// Piedras: ~2/3 de tile, un poco más lentas que el jugador, hitbox == sprite,
-// se mueven por el centro de los bloques y NUNCA quedan mitad en el borde:
-// solo entran a bloques donde caben completas. El empuje NO arranca si la
-// celda siguiente es borde/pared/otra piedra.
+// Puzzle botones: TB1..TB12 en orden (5s de bloqueo entre pisadas).
+// Puzzle piedra: PIx empujables hasta PLx, dentro de polígonos PUZx; RBx reinicia.
+// Pinchos: PINx bloquean el paso y se ven con spr_spiketile_0.png; al completar
+// el puzzle de botones Y el de la piedra, dejan de bloquear y pasan a
+// spr_spiketile_1.png (guardados) en el mismo lugar.
 
 const MAPS_FOLDER = "/Tiles/";
 const MAP_EXT = ".tmj";
@@ -111,7 +109,7 @@ function loadImages() {
 }
 
 // ---------------------------------------------------------------------
-// 2. DECODIFICAR CAPAS
+// 2. DECODIFICAR CAPAS (soporta chunks base64, base64 entero y CSV)
 // ---------------------------------------------------------------------
 const FLIP_MASK = 0x1FFFFFFF;
 
@@ -257,12 +255,18 @@ function pointInPolygon(px, py, points) {
 }
 
 // ---------------------------------------------------------------------
-// 3. COLISIÓN DE PAREDES + PIEDRAS (bloquean al jugador)
+// 3. COLISIÓN DE PAREDES + PIEDRAS + PINCHOS
 // ---------------------------------------------------------------------
 let wallObjects = [];
 
 function rectHitsWall(rect) {
   if (wallObjects.some(obj => rectsOverlap(rect, obj))) return true;
+
+  // 🌵 Pinchos: bloquean SOLO mientras están activados.
+  // Cuando se completan los 2 puzzles, dejan de bloquear (el jugador pasa).
+  if (!spikesDesactivados() && spikes.some(sp => rectsOverlap(rect, sp))) return true;
+
+  // Las piedras también bloquean al jugador
   return stones.some(s => rectsOverlap(rect, s));
 }
 
@@ -278,7 +282,7 @@ function moveWithWallCollision(player, dx, dy) {
 }
 
 // ---------------------------------------------------------------------
-// 4. DOORS
+// 4. DOORS (puertas) + cambio de mapa con cuadrados de aparición
 // ---------------------------------------------------------------------
 let doors = [];
 let doorsByName = {};
@@ -580,8 +584,6 @@ function drawButtonOverlays(ctx, canvas, camera) {
 
 // ---------------------------------------------------------------------
 // 6. PUZZLE DE PIEDRAS (PIx empujables, PUZx cerco, PLx objetivo, RBx reset)
-// Regla clave: la piedra NUNCA entra a una celda que sea borde/pared/piedra.
-// Si la próxima dirección lleva a una celda inválida, no se mueve hacia allá.
 // ---------------------------------------------------------------------
 let stones = [];
 let stoneTargets = [];
@@ -597,32 +599,6 @@ function piedraSize() {
 
 let piImage = null;
 
-// Bloque "dueño" de un punto: si cae en línea, desempata arriba/izq.
-function tileOwner(v, tileSize) {
-  return Math.floor((v - 0.001) / tileSize);
-}
-
-function snapStoneToGrid(s) {
-  const tam = s.width;
-  const cx = s.x + tam / 2;
-  const cy = s.y + tam / 2;
-  const tileX = tileOwner(cx, TILE_W);
-  const tileY = tileOwner(cy, TILE_H);
-
-  const antesX = s.x;
-  const antesY = s.y;
-
-  s.x = tileX * TILE_W + (TILE_W - tam) / 2;
-  s.y = tileY * TILE_H + (TILE_H - tam) / 2;
-
-  // Si esa posición resultara inválida (ej: la dejó sobre otra piedra), reverte
-  if (!celdaLibreParaPiedra(s, tileX, tileY) && s !== null) {
-    s.x = antesX;
-    s.y = antesY;
-  }
-}
-
-// Celda (tile) donde está apoyada la piedra ahora
 function tileDePiedra(stone) {
   return {
     x: tileOwner(stone.x + stone.width / 2, TILE_W),
@@ -630,26 +606,10 @@ function tileDePiedra(stone) {
   };
 }
 
-// ¿La piedra puede apoyarse centrada en esta celda?
-// Es libre si:
-//  - entra completa en el polígono PUZ (si tiene uno asignado)
-//  - NO pisa ninguna pared de la capa Interactuable
-//  - NO pisa otra piedra
-function celdaLibreParaPiedra(stone, tileX, tileY) {
-  const rect = {
-    x: tileX * TILE_W + (TILE_W - stone.width) / 2,
-    y: tileY * TILE_H + (TILE_H - stone.height) / 2,
-    width: stone.width,
-    height: stone.height,
-  };
-
-  if (stone.arenaPoints && !stoneInArena(rect, stone.arenaPoints)) return false;
-  if (wallObjects.some(w => rectsOverlap(rect, w))) return false;
-  if (stones.some(o => o !== stone && rectsOverlap(rect, o))) return false;
-  return true;
+function tileOwner(v, tileSize) {
+  return Math.floor((v - 0.001) / tileSize);
 }
 
-// Centra la piedra en su celda actual (solo si esa posición es válida)
 function centrarPiedraEnSuCelda(s) {
   const t = tileDePiedra(s);
   const cx = t.x * TILE_W + (TILE_W - s.width) / 2;
@@ -663,6 +623,31 @@ function centrarPiedraEnSuCelda(s) {
     s.x = cx;
     s.y = cy;
   }
+}
+
+function stoneInArena(rect, arenaPoints) {
+  if (!arenaPoints) return true;
+  const m = 1;
+  return (
+    pointInPolygon(rect.x + m, rect.y + m, arenaPoints) &&
+    pointInPolygon(rect.x + rect.width - m, rect.y + m, arenaPoints) &&
+    pointInPolygon(rect.x + m, rect.y + rect.height - m, arenaPoints) &&
+    pointInPolygon(rect.x + rect.width - m, rect.y + rect.height - m, arenaPoints)
+  );
+}
+
+function celdaLibreParaPiedra(stone, tileX, tileY) {
+  const rect = {
+    x: tileX * TILE_W + (TILE_W - stone.width) / 2,
+    y: tileY * TILE_H + (TILE_H - stone.height) / 2,
+    width: stone.width,
+    height: stone.height,
+  };
+
+  if (stone.arenaPoints && !stoneInArena(rect, stone.arenaPoints)) return false;
+  if (wallObjects.some(w => rectsOverlap(rect, w))) return false;
+  if (stones.some(o => o !== stone && rectsOverlap(rect, o))) return false;
+  return true;
 }
 
 function initStoneObjects() {
@@ -754,13 +739,20 @@ function initStoneObjects() {
         });
       }
       else if (/^RB\d+$/i.test(obj.name)) {
+        if (!obj.width && !obj.height) {
+          obj.width = TILE_W;
+          obj.height = TILE_H;
+          obj.x -= TILE_W / 2;
+          obj.y -= TILE_H / 2;
+        }
+
         resetButtons.push({
           name: obj.name,
           num: parseInt(obj.name.replace(/^RB/i, ""), 10),
           x: obj.x,
           y: obj.y,
-          width: obj.width || TILE_W,
-          height: obj.height || TILE_H,
+          width: obj.width,
+          height: obj.height,
         });
       }
     }
@@ -777,19 +769,24 @@ function initStoneObjects() {
   }
 }
 
-// ¿El rect de la piedra entra COMPLETO en el arena?
-function stoneInArena(rect, arenaPoints) {
-  if (!arenaPoints) return true; // si no hay arena, consideramos libre
-  const m = 1;
-  return (
-    pointInPolygon(rect.x + m, rect.y + m, arenaPoints) &&
-    pointInPolygon(rect.x + rect.width - m, rect.y + m, arenaPoints) &&
-    pointInPolygon(rect.x + m, rect.y + rect.height - m, arenaPoints) &&
-    pointInPolygon(rect.x + rect.width - m, rect.y + rect.height - m, arenaPoints)
-  );
+function snapStoneToGrid(s) {
+  const t = tileDePiedra(s);
+  const antesX = s.x;
+  const antesY = s.y;
+
+  s.x = t.x * TILE_W + (TILE_W - s.width) / 2;
+  s.y = t.y * TILE_H + (TILE_H - s.height) / 2;
+
+  if (!celdaLibreParaPiedra(s, t.x, t.y)) {
+    s.x = antesX;
+    s.y = antesY;
+  }
 }
 
-// Objetivo libre (PL del mismo puzzle, sin ocupar) que pisa el rect
+function hitsOtherStone(stone, rect) {
+  return stones.some(o => o !== stone && rectsOverlap(rect, o));
+}
+
 function findFreeTarget(stone, rect) {
   return stoneTargets.find(t =>
     t.puzzle === stone.puzzle &&
@@ -798,8 +795,6 @@ function findFreeTarget(stone, rect) {
   ) || null;
 }
 
-// Avanza la piedra que desliza, de a 1px, hasta que frena.
-// Solo puede ENTRAR a bloques donde cabe completa (y libres de pared/piedra).
 function stepStone(s) {
   const dir = s.sliding;
   let moved = 0;
@@ -809,7 +804,6 @@ function stepStone(s) {
     const ny = s.y + dir.dy;
     const test = { x: nx, y: ny, width: s.width, height: s.height };
 
-    // ¿Llegó a un objetivo? Se traba para siempre ahí
     const target = findFreeTarget(s, test);
     if (target) {
       s.x = target.x + target.width / 2 - s.width / 2;
@@ -822,15 +816,13 @@ function stepStone(s) {
       return;
     }
 
-    // ¿Choca con otra piedra? Frena centrada en su celda
-    if (stones.some(o => o !== s && rectsOverlap(test, o))) {
+    if (hitsOtherStone(s, test)) {
       centrarPiedraEnSuCelda(s);
       s.sliding = null;
       console.log(`🛑 ${s.name} frenó (otra piedra)`);
       return;
     }
 
-    // ¿Pisa pared? Frena centrada
     if (wallObjects.some(w => rectsOverlap(test, w))) {
       centrarPiedraEnSuCelda(s);
       s.sliding = null;
@@ -838,7 +830,6 @@ function stepStone(s) {
       return;
     }
 
-    // ¿Sale del polígono PUZ (si tiene)? Frena centrada
     if (s.arenaPoints && !stoneInArena(test, s.arenaPoints)) {
       centrarPiedraEnSuCelda(s);
       s.sliding = null;
@@ -846,20 +837,17 @@ function stepStone(s) {
       return;
     }
 
-    // 🔑 ¿Está por cruzar a la celda siguiente? Solo si esa celda es libre.
-    // Si la siguiente es borde/pared/piedra, NO se mueve hacia allá.
     const tileAhora = tileDePiedra(s);
     const tileDespues = {
       x: tileOwner(nx + s.width / 2, TILE_W),
       y: tileOwner(ny + s.height / 2, TILE_H),
     };
-    if (tileDespues.x !== tileAhora.x || tileDespues.y !== tileAhora.y) {
-      if (!celdaLibreParaPiedra(s, tileDespues.x, tileDespues.y)) {
-        centrarPiedraEnSuCelda(s);
-        s.sliding = null;
-        console.log(`🛑 ${s.name} no avanzó: la celda siguiente es borde/pared`);
-        return;
-      }
+    if ((tileDespues.x !== tileAhora.x || tileDespues.y !== tileAhora.y) &&
+        !celdaLibreParaPiedra(s, tileDespues.x, tileDespues.y)) {
+      centrarPiedraEnSuCelda(s);
+      s.sliding = null;
+      console.log(`🛑 ${s.name} frenó (borde), queda centrada en su bloque`);
+      return;
     }
 
     s.x = nx;
@@ -868,67 +856,70 @@ function stepStone(s) {
   }
 }
 
-// Empuje + deslizamiento. Llamar cada frame con el dx/dy del jugador.
+// Empuje + deslizamiento. El empuje NO arranca al caminar:
+// solo arranca con la tecla E (ver empujarPiedra, la llama site.js).
 function updatePiedras(player, dx, dy) {
-  // 0) Red de seguridad: toda piedra quieta y destrabada queda centrada en su celda
+  // 0) Red de seguridad: toda piedra quieta y destrabada queda centrada en su bloque
   for (const s of stones) {
     if (s.sliding || s.locked) continue;
     const t = tileDePiedra(s);
-    const cx = t.x * TILE_W + (TILE_W - s.width) / 2;
-    const cy = t.y * TILE_H + (TILE_H - s.height) / 2;
-    if (Math.abs(s.x - cx) > 0.5 || Math.abs(s.y - cy) > 0.5) {
+    const cx = t.x * TILE_W + TILE_W / 2;
+    const cy = t.y * TILE_H + TILE_H / 2;
+    const centroX = s.x + s.width / 2;
+    const centroY = s.y + s.height / 2;
+    if (Math.abs(centroX - cx) > 0.5 || Math.abs(centroY - cy) > 0.5) {
       if (celdaLibreParaPiedra(s, t.x, t.y)) {
-        s.x = cx;
-        s.y = cy;
+        s.x = cx - s.width / 2;
+        s.y = cy - s.height / 2;
       }
     }
   }
 
-  // 1) Empuje: solo arranca si la celda siguiente en esa dirección es libre
-  if (dx !== 0 || dy !== 0) {
-    const margen = 6;
-    const expanded = {
-      x: player.x - margen,
-      y: player.y - margen,
-      width: player.width + margen * 2,
-      height: player.height + margen * 2,
-    };
-
-    for (const s of stones) {
-      if (s.locked || s.sliding) continue;
-      if (!rectsOverlap(expanded, s)) continue;
-
-      let dirX = 0, dirY = 0;
-
-      if (dx !== 0) {
-        const centroPlayer = player.x + player.width / 2;
-        const centroStone = s.x + s.width / 2;
-        const hacia = (dx > 0) ? (centroStone >= centroPlayer) : (centroStone <= centroPlayer);
-        if (hacia) dirX = Math.sign(dx);
-      } else if (dy !== 0) {
-        const centroPlayer = player.y + player.height / 2;
-        const centroStone = s.y + s.height / 2;
-        const hacia = (dy > 0) ? (centroStone >= centroPlayer) : (centroStone <= centroPlayer);
-        if (hacia) dirY = Math.sign(dy);
-      }
-
-      if (dirX !== 0 || dirY !== 0) {
-        const t = tileDePiedra(s);
-        const sig = { x: t.x + dirX, y: t.y + dirY };
-
-        // 🔑 Si la próxima celda es borde/pared/piedra, el empuje NI ARRANCA.
-        if (celdaLibreParaPiedra(s, sig.x, sig.y)) {
-          s.sliding = { dx: dirX, dy: dirY };
-          console.log(`🪨 Empuje ${s.name} ->`, dirX, dirY);
-        }
-      }
-    }
-  }
-
-  // 2) Mover las que ya están deslizando
+  // 1) Avanzar las que ya están deslizando (el empuje lo inicia la tecla E)
   for (const s of stones) {
     if (s.sliding) stepStone(s);
   }
+}
+
+// 🔑 Empuje manual con E: intenta arrancar el deslizamiento de la piedra
+// que esté delante del jugador, en la dirección que mira.
+// Devuelve true si alguna piedra arrancó (site.js lo usa en la tecla E).
+function empujarPiedra(player, dirX, dirY) {
+  if (isTransitioning()) return false;
+  if (dirX === 0 && dirY === 0) return false;
+
+  const margen = 6;
+  const expanded = {
+    x: player.x - margen,
+    y: player.y - margen,
+    width: player.width + margen * 2,
+    height: player.height + margen * 2,
+  };
+
+  for (const s of stones) {
+    if (s.locked || s.sliding) continue;
+    if (!rectsOverlap(expanded, s)) continue;
+
+    // La piedra tiene que estar efectivamente hacia donde mirás
+    const centroPlayerX = player.x + player.width / 2;
+    const centroPlayerY = player.y + player.height / 2;
+    const centroStoneX = s.x + s.width / 2;
+    const centroStoneY = s.y + s.height / 2;
+
+    const hacia = (dirX !== 0)
+      ? (dirX > 0 ? centroStoneX >= centroPlayerX : centroStoneX <= centroPlayerX)
+      : (dirY > 0 ? centroStoneY >= centroPlayerY : centroStoneY <= centroPlayerY);
+    if (!hacia) continue;
+
+    // Si la celda siguiente no es libre (borde/pared/piedra), no arranca
+    const t = tileDePiedra(s);
+    if (!celdaLibreParaPiedra(s, t.x + dirX, t.y + dirY)) continue;
+
+    s.sliding = { dx: dirX, dy: dirY };
+    console.log(`🪨 Empuje (E) ${s.name} ->`, dirX, dirY);
+    return true;
+  }
+  return false;
 }
 
 function checkPiedrasPuzzle(num) {
@@ -955,7 +946,6 @@ function resetPiedrasPuzzle(num) {
   puzzlePiedraCompletado[num] = false;
 }
 
-// Botones RBx: reinician el puzzle x, SOLO si no está completado
 function checkResetButtons(player) {
   if (isTransitioning()) return;
 
@@ -966,6 +956,7 @@ function checkResetButtons(player) {
 
   for (const name of touched) {
     if (rbStepped.has(name)) continue;
+    if (isButtonActive(name)) continue;
 
     const rb = resetButtons.find(r => r.name === name);
     if (!rb || isNaN(rb.num)) continue;
@@ -976,6 +967,7 @@ function checkResetButtons(player) {
     }
 
     resetPiedrasPuzzle(rb.num);
+    activateButton(name);
     console.log(`🔄 Puzzle PUZ${rb.num} reiniciado desde 0`);
   }
 
@@ -986,6 +978,8 @@ function drawPIOverlays(ctx, canvas, camera) {
   if (!piImage || !piImage.complete || piImage.failed) return;
 
   const recortes = (typeof PI_RECORTES !== "undefined") ? PI_RECORTES : {};
+  const dx0 = (typeof PI_DX !== "undefined") ? PI_DX : 0;
+  const dy0 = (typeof PI_DY !== "undefined") ? PI_DY : 0;
 
   for (const s of stones) {
     const r = recortes[s.name] || recortes["*"];
@@ -993,19 +987,77 @@ function drawPIOverlays(ctx, canvas, camera) {
 
     const sx = r[0], sy = r[1], sw = r[2], sh = r[3];
 
+    const destX = Math.round(s.x + s.width / 2 - sw / 2 + dx0 - camera.x);
+    const destY = Math.round(s.y + s.height / 2 - sh / 2 + dy0 - camera.y);
+
+    ctx.drawImage(piImage, sx, sy, sw, sh, destX, destY, sw, sh);
+  }
+}
+
+// ---------------------------------------------------------------------
+// 6b. PINCHOS (PINx): bloquean el paso hasta completar los 2 puzzles
+// ---------------------------------------------------------------------
+let spikes = [];
+let spikeImage0 = null; // spr_spiketile_0.png = pincho ACTIVADO (peligroso)
+let spikeImage1 = null; // spr_spiketile_1.png = pincho GUARDADO (se puede pasar)
+
+// ¿Se completaron los 2 primeros puzzles?
+//  1) El de tocar los botones TB en orden  -> puzzleCompletado
+//  2) El de llevar la piedra a la placa    -> algún puzzlePiedraCompletado en true
+// Si querés que exija TODOS los puzzles de piedra, cambiá .some( por .every(
+function spikesDesactivados() {
+  const botones = puzzleCompletado;
+  const piedras = Object.values(puzzlePiedraCompletado).some(v => v);
+  return botones && piedras;
+}
+
+function initSpikeObjects() {
+  spikes = [];
+
+  for (const layer of mapData.layers) {
+    if (layer.type !== "objectgroup") continue;
+    for (const obj of layer.objects || []) {
+      if (obj.name && /^PIN\d+$/i.test(obj.name)) {
+        spikes.push({
+          name: obj.name,
+          x: obj.x,
+          y: obj.y,
+          width: obj.width || TILE_W,
+          height: obj.height || TILE_H,
+        });
+      }
+    }
+  }
+
+  if (!spikeImage0) {
+    spikeImage0 = new Image();
+    spikeImage0.src = TILE_FOLDER + "spr_spiketile_0_editado.png";
+  }
+  if (!spikeImage1) {
+    spikeImage1 = new Image();
+    spikeImage1.src = TILE_FOLDER + "spr_spiketile_1_editado.png";
+  }
+}
+
+// Dibuja los pinchos en su lugar: sprite 0 si están activados,
+// sprite 1 (guardados) si ya se completaron los 2 puzzles.
+function drawSpikes(ctx, camera) {
+  const img = spikesDesactivados() ? spikeImage1 : spikeImage0;
+  if (!img || !img.complete || img.naturalWidth === 0) return;
+
+  for (const sp of spikes) {
     ctx.drawImage(
-      piImage,
-      sx, sy, sw, sh,
-      Math.round(s.x - camera.x),
-      Math.round(s.y - camera.y),
-      s.width,
-      s.height
+      img,
+      Math.round(sp.x - camera.x),
+      Math.round(sp.y - camera.y),
+      sp.width,
+      sp.height
     );
   }
 }
 
 // ---------------------------------------------------------------------
-// 6b. CARTELES (C1..C10)
+// 6c. CARTELES (C1..C10)
 // ---------------------------------------------------------------------
 let signs = [];
 
@@ -1089,6 +1141,9 @@ function drawScene(ctx, canvas, player, camera) {
   camera.x = Math.round(camera.x);
   camera.y = Math.round(camera.y);
 
+  ctx.save();
+  ctx.beginPath();
+  // (el clip de room se mantiene si lo usás; los pinchos se dibujan adentro)
   for (const name of TILE_LAYER_NAMES) {
     const tiles = decodedLayers[name];
     if (!tiles) continue;
@@ -1096,6 +1151,11 @@ function drawScene(ctx, canvas, player, camera) {
       drawTile(ctx, t.gid, t.tileX, t.tileY, camera);
     }
   }
+
+  // 🌵 Pinchos encima de los tiles, debajo del jugador
+  drawSpikes(ctx, camera);
+
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------------
@@ -1126,6 +1186,7 @@ async function loadMap(mapName) {
 
   initMapObjects();
   initStoneObjects();
+  initSpikeObjects();
   initSignObjects();
   buildTilesetRanges();
   decodeAllLayers();
@@ -1141,11 +1202,10 @@ async function loadMap(mapName) {
 
 function initMapObjects() {
   const wallsLayer = mapData.layers.find(l => l.name === "Interactuable");
-  // 🪨 Excluye objetos de puzzle (PI/PL/RB/PUZ) que estén en esta capa:
-  // NO son paredes, tienen su propia lógica (si no, la hitbox de la piedra
-  // deja una pared fantasma fija que traba todo).
+  // 🪨 Excluye objetos de puzzle (PI/PL/RB/PUZ/PIN) de las paredes:
+  // su bloqueo lo maneja el código (piedras y pinchos), no la capa.
   wallObjects = wallsLayer
-    ? wallsLayer.objects.filter(o => !o.name || !/^(PI|PL|RB|PUZ)\d+$/i.test(o.name))
+    ? wallsLayer.objects.filter(o => !o.name || !/^(PI|PL|RB|PUZ|PIN)\d+$/i.test(o.name))
     : [];
 
   const doorsLayer = mapData.layers.find(l => l.name === "Doors");
