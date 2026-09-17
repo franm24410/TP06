@@ -827,6 +827,6 @@ C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\o8o9e6grpd-{0}-f88se2vr
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\w0qnrzqib2-{0}-69kvn2ed2d-69kvn2ed2d.gz
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\3qt98eca4c-{0}-qezjx3tiz3-qezjx3tiz3.gz
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\TP06.csproj.Up2Date
-C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\qujrake7r8-{0}-kyuhj5plk6-kyuhj5plk6.gz
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\knl4qy3831-{0}-rex400hh6l-rex400hh6l.gz
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\9x5a2q6t6s-{0}-wz4wbvd61j-wz4wbvd61j.gz
+C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\qujrake7r8-{0}-nou34osiot-nou34osiot.gz
