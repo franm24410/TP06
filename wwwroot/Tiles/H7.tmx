@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="15" height="24" tilewidth="20" tileheight="20" infinite="1" nextlayerid="15" nextobjectid="480">
+ <editorsettings>
+  <export target="H7.tmj" format="json"/>
+ </editorsettings>
  <tileset firstgid="1" source="bg_ruinseasynam2.tsx"/>
  <tileset firstgid="73" source="bg_ruinseasynam3.tsx"/>
  <tileset firstgid="257" source="bg_tundratiles.tsx"/>
@@ -95,7 +98,7 @@
   <object id="143" x="3600.5" y="-560.25" width="40" height="42.8792"/>
   <object id="144" x="3479.75" y="-559.5" width="80.25" height="41.8792"/>
   <object id="145" x="3480.25" y="-547.023" width="40" height="69.9072"/>
-  <object id="436" name="PIN4" x="3560.5" y="-538.75" width="39.5" height="18.25"/>
+  <object id="436" name="PIN4" x="3560.5" y="-538.75" width="39.5" height="36.25"/>
  </objectgroup>
  <objectgroup id="8" name="Interactuable-Piso">
   <object id="476" name="11" x="3570.27" y="-162.75" width="20" height="20.5"/>
