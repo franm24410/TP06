@@ -69,6 +69,7 @@ function loadImages(){
   set.add(SPIKE_HIGH); set.add(SPIKE_LOW);
   const btn = TILESET_CONFIG["spr_groundswitch1_1.tsx"];
   if (btn) set.add(TILE_FOLDER+btn.image);
+  if (typeof PI_IMAGEN!=="undefined" && PI_IMAGEN) set.add(PI_IMAGEN);
   const proms = [];
   for (const path of set){
     if (loadedImages[path]) continue;
@@ -194,8 +195,12 @@ function checkCaidas(p){
   if(isTransitioning()) return;
   for (const c of caidas){
     if(rectsOverlap(p,c)){
-      // Mismas coordenadas (x,y), pero en el mapa H5. duracion más larga = fade lento.
-      startDoorTransition(p, { targetMap:"H5", x:p.x, y:p.y, duracion:900 });
+      // % de dónde estás parado dentro de "caidaOrigen" (toda la habitación).
+      // Si no existe ese objeto en el mapa, se usa el propio hitbox "cai" como referencia.
+      const origen = findObjectByName("caidaOrigen") || c;
+      const pctX = (p.x+p.width/2 - origen.x) / (origen.width||1);
+      const pctY = (p.y+p.height/2 - origen.y) / (origen.height||1);
+      startDoorTransition(p, { targetMap:"H5", pct:{x:pctX,y:pctY}, duracion:900 });
       break;
     }
   }
@@ -214,8 +219,18 @@ function isTransitioning(){ return doorTransition!==null; }
 function startDoorTransition(p,ch){ if(doorTransition) return; doorTransition={player:p,phase:"in",timer:0,change:ch,duracion:ch.duracion||TRANSITION_HALF}; }
 async function performMapChange(p,ch){
   if (ch.targetMap && ch.targetMap!==currentMapName) await loadMap(ch.targetMap);
-  if (typeof ch.x==="number" && typeof ch.y==="number"){
-    // Coordenadas explícitas (ej: caídas): mismo lugar, mapa nuevo
+  if (ch.pct){
+    // Caída: mismo % relativo dentro del rectángulo "caidaDestino" del mapa nuevo
+    const destino = findObjectByName("caidaDestino");
+    if (destino){
+      const px = Math.min(Math.max(ch.pct.x,0),1), py = Math.min(Math.max(ch.pct.y,0),1);
+      const cx = destino.x + px*(destino.width||0), cy = destino.y + py*(destino.height||0);
+      p.x = Math.round(cx - p.width/2); p.y = Math.round(cy - p.height/2);
+    } else {
+      console.warn("Falta el objeto 'caidaDestino' en "+currentMapName);
+      const sp = getDefaultSpawn(); p.x=Math.round(sp.x-p.width/2); p.y=Math.round(sp.y-p.height/2);
+    }
+  } else if (typeof ch.x==="number" && typeof ch.y==="number"){
     p.x = ch.x; p.y = ch.y;
   } else {
     const sq = findObjectByName(ch.spawnSquareName);
@@ -546,9 +561,10 @@ async function loadMap(name){
   initMapObjects(); initStoneObjects(); initSpikes(); initSignObjects(); initCaidas();
   buildTilesetRanges(); decodeAllLayers(); computeWorldBounds();
   await loadImages();
-  // 🆕 Imagen de las piedras (recorte de piConfig). Sin esto, drawPIOverlays no dibuja nada.
+  // Imagen de las piedras: reusa la que ya cargó loadImages() más arriba
+  // (mismo tileset del piso), en vez de pedirla de nuevo por separado.
   const ruta=(typeof PI_IMAGEN!=="undefined"&&PI_IMAGEN)?PI_IMAGEN:null;
-  if(ruta&&!piImage){ piImage=new Image(); piImage.onerror=()=>{ piImage.failed=true; }; piImage.src=ruta; }
+  if(ruta) piImage = loadedImages[ruta] || piImage;
 }
 function initMapObjects(){
   const wl=mapData.layers.find(l=>l.name==="Interactuable");
