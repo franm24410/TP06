@@ -1,31 +1,47 @@
-using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using TP06.Models;
 
-namespace TP06.Controllers;
-
-public class HomeController : Controller
+namespace TP06.Controllers
 {
-    private readonly ILogger<HomeController> _logger;
-
-    public HomeController(ILogger<HomeController> logger)
+    public class HomeController : Controller
     {
-        _logger = logger;
-    }
+        private readonly DB _db = new DB();
 
-    public IActionResult Index()
-    {
-        return View();
-    }
+        private bool Logueado => HttpContext.Session.GetInt32("idUsuario").HasValue;
 
-    public IActionResult Privacy()
-    {
-        return View();
-    }
+        // LOGIN
+        public IActionResult Index()
+        {
+            if (Logueado) return RedirectToAction("Juego");
+            return View();
+        }
 
-    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-    public IActionResult Error()
-    {
-        return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        [HttpPost]
+        public IActionResult Login(string usuario, string contrasenia)
+        {
+            var u = _db.ValidarLogin(usuario, contrasenia);
+            if (u == null)
+            {
+                ViewBag.Error = "Usuario o contraseña incorrectos.";
+                return View("Index");
+            }
+            HttpContext.Session.SetInt32("idUsuario", u.IdUsuario);
+            HttpContext.Session.SetString("nombreUsuario", u.NombreUsuario);
+            return RedirectToAction("Juego");
+        }
+
+        // JUEGO
+        public IActionResult Juego()
+        {
+            if (!Logueado) return RedirectToAction("Index");
+            ViewBag.Nombre = HttpContext.Session.GetString("nombreUsuario");
+            return View();
+        }
+
+        public IActionResult Logout()
+        {
+            HttpContext.Session.Clear();
+            return RedirectToAction("Index");
+        }
     }
 }

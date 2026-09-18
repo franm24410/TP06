@@ -1,22 +1,22 @@
-// ========================================
-// CONFIGURACIÓN DEL PUZZLE DE BOTONES
-// ========================================
-// Formato: cada ronda es [primerBoton, segundoBoton]
-// Los números corresponden a TB1, TB2, TB3... TB12
-// Ejemplo: [1, 3] significa tocar TB1 y después TB3 en menos de 5 segundos
-
+// Secuencias del puzzle de botones (TB)
 const PUZZLE_SECUENCIAS = [
-    [1, 3],   // Ronda 1: TB1 → TB3
-    [5, 7],   // Ronda 2: TB5 → TB7
-    [2, 9],   // Ronda 3: TB2 → TB9
-    [8, 12]   // Ronda 4: TB8 → TB12
+    [1, 3],
+    [5, 7],
+    [2, 9],
+    [8, 12]
 ];
-
-// Tiempo en milisegundos que tenés para tocar el segundo botón
-const PUZZLE_TIEMPO_LIMITE = 5000; // 5 segundos
-
-// Nombre de la capa de Tiled donde están las hitboxes de los botones
+const PUZZLE_TIEMPO_LIMITE = 5000;
 const PUZZLE_CAPA_BOTONES = "Interactuable-Piso";
 
-// URL del controller para guardar en la base de datos
-const PUZZLE_URL_GUARDAR = "/Puzzle/GuardarCompletado";
+// A qué puzzle de piedras (PUZ) pertenece cada pincho (PINx).
+// Si un número no está acá, usa su propio número.
+const SPIKE_PUZZLE = {
+    1: 1,
+    2: 1,
+    3: 3,
+    4: 3
+};
+
+// Puzzles de piedras que ADEMÁS requieren que el puzzle de botones (TB) esté completo
+// para que sus pinchos bajen.
+const SPIKE_REQUIERE_BOTONES = [1];

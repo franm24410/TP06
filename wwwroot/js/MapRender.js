@@ -1,1240 +1,574 @@
-// mapRender.js — versión MULTI-MAPA
-// Puertas: capa Doors, nombre phX + propiedad targetMap (aparecés en el objeto "X").
-// Carteles: C1..C10 en "Interactuable-Pared" (E para leer).
-// Puzzle botones: TB1..TB12 en orden (5s de bloqueo entre pisadas).
-// Puzzle piedra: PIx empujables hasta PLx, dentro de polígonos PUZx; RBx reinicia.
-// Pinchos: PINx bloquean el paso y se ven con spr_spiketile_0.png; al completar
-// el puzzle de botones Y el de la piedra, dejan de bloquear y pasan a
-// spr_spiketile_1.png (guardados) en el mismo lugar.
+// mapRender.js — multi-mapa (Hx.tmj) + estado persistente (ESTADO pasado por site.js)
+// - Puertas: capa Doors, nombre phX + propiedad targetMap; aparecés en el objeto "X".
+// - Piedras: PIx empujables (E), encerradas en PUZx, se traban en PLx; RBx reinicia
+//   (con animación de prendido 5s, igual que los TB).
+// - Pinchos: PINx dibujan spr_spiketile_0_editado.png y bloquean; si su puzzle está
+//   completado pasan a spr_spiketile_1_editado.png y NO bloquean.
+// - Carteles: C1..C10 en Interactuable-Pared (E para leer). Guardado: GUA1.
+// - Estado de piedras guardado por clave "mapa:nombre" (no pisa entre mapas).
 
 const MAPS_FOLDER = "/Tiles/";
 const MAP_EXT = ".tmj";
-const MAPA_INICIAL = window.MAPA_INICIAL || "H1";
+
+const SPIKE_HIGH = "/Tiles/spr_spiketile_0_editado.png";
+const SPIKE_LOW  = "/Tiles/spr_spiketile_1_editado.png";
 
 let mapData = null;
 let currentMapName = null;
-let TILE_W = 20;
-let TILE_H = 20;
+let TILE_W = 20, TILE_H = 20;
+let worldBounds = { minX:0, minY:0, maxX:0, maxY:0 };
 
-let worldBounds = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+// Referencia al estado de partida (la declara site.js; acá solo se usa).
+// initMapRender() la asigna con "ESTADO = estado;" más abajo.
 
-// ---------------------------------------------------------------------
-// 1. CONFIGURACIÓN DE TILESETS
-// ---------------------------------------------------------------------
 const TILE_FOLDER = "/Tiles/";
-
 const TILESET_CONFIG = {
-  "bg_ruinseasynam1.tsx": { image: "bg_ruinseasynam1.png", columns: 8 },
-  "bg_ruinseasynam2.tsx": { image: "bg_ruinseasynam2.png", columns: 8 },
-  "bg_ruinseasynam3.tsx": { image: "bg_ruinseasynam3.png", columns: 8 },
-  "bg_ruintiles1.tsx":    { image: "bg_ruintiles1.png",    columns: 6 },
-  "bg_tundratiles.tsx":   { image: "bg_tundratiles.png",   columns: 9 },
-  "spr_snowpap_0.tsx":         { image: "spr_snowpap_0.png",         columns: 1 },
-  "spr_groundswitch1_0.tsx":   { image: "spr_groundswitch1_0.png",   columns: 1 },
-  "spr_groundswitch1_1.tsx":   { image: "spr_groundswitch1_1.png",   columns: 1 },
-  "spr_npc_sign_0.tsx":        { image: "spr_npc_sign_0.png",        columns: 1 },
-  "spr_smallweb_0.tsx":        { image: "spr_smallweb_0.png",        columns: 1 },
-  "spr_xmastree_0.tsx":        { image: "spr_xmastree_0.png",        columns: 1 },
-  "spr_spiketile_0.tsx":       { image: "spr_spiketile_0.png",       columns: 1 },
-  "spr_spiketile_1.tsx":       { image: "spr_spiketile_1.png",       columns: 1 },
-  "spr_papyrushouse_0.tsx":    { image: "spr_papyrushouse_0.png",    columns: 1 },
-  "spr_snowdinlogo_ja_0.tsx":  { image: "spr_snowdinlogo_ja_0.png",  columns: 1 },
-  "spr_vinespillar_0.tsx":     { image: "spr_vinespillar_0.png",     columns: 1 },
+  "bg_ruinseasynam1.tsx": { image:"bg_ruinseasynam1.png", columns:8 },
+  "bg_ruinseasynam2.tsx": { image:"bg_ruinseasynam2.png", columns:8 },
+  "bg_ruinseasynam3.tsx": { image:"bg_ruinseasynam3.png", columns:8 },
+  "bg_ruintiles1.tsx":    { image:"bg_ruintiles1.png",    columns:6 },
+  "bg_tundratiles.tsx":   { image:"bg_tundratiles.png",   columns:9 },
+  "spr_snowpap_0.tsx":        { image:"spr_snowpap_0.png",        columns:1 },
+  "spr_groundswitch1_0.tsx":  { image:"spr_groundswitch1_0.png",  columns:1 },
+  "spr_groundswitch1_1.tsx":  { image:"spr_groundswitch1_1.png",  columns:1 },
+  "spr_npc_sign_0.tsx":       { image:"spr_npc_sign_0.png",       columns:1 },
+  "spr_smallweb_0.tsx":       { image:"spr_smallweb_0.png",       columns:1 },
+  "spr_xmastree_0.tsx":       { image:"spr_xmastree_0.png",       columns:1 },
+  "spr_spiketile_0.tsx":      { image:"spr_spiketile_0.png",      columns:1 },
+  "spr_spiketile_1.tsx":      { image:"spr_spiketile_1.png",      columns:1 },
+  "spr_papyrushouse_0.tsx":   { image:"spr_papyrushouse_0.png",   columns:1 },
+  "spr_snowdinlogo_ja_0.tsx": { image:"spr_snowdinlogo_ja_0.png", columns:1 },
+  "spr_vinespillar_0.tsx":    { image:"spr_vinespillar_0.png",    columns:1 }
 };
 
-function getFileName(path) {
-  if (!path) return null;
-  return path.split(/[\\/]/).pop();
-}
+function getFileName(p){ return p ? p.split(/[\\/]/).pop() : null; }
 
 const loadedImages = {};
 const tilesetRanges = [];
 
-function buildTilesetRanges() {
+function buildTilesetRanges(){
   const list = mapData.tilesets;
-  for (let i = 0; i < list.length; i++) {
+  for (let i=0;i<list.length;i++){
     const ts = list[i];
-    const nextFirstgid = list[i + 1] ? list[i + 1].firstgid : Infinity;
-
-    if (ts.image) {
-      tilesetRanges.push({
-        firstgid: ts.firstgid,
-        lastgid: nextFirstgid - 1,
-        columns: ts.columns,
-        image: TILE_FOLDER + getFileName(ts.image),
-        margin: ts.margin || 0,
-        spacing: ts.spacing || 0,
-      });
+    const next = list[i+1] ? list[i+1].firstgid : Infinity;
+    if (ts.image){
+      tilesetRanges.push({ firstgid:ts.firstgid, lastgid:next-1, columns:ts.columns,
+        image:TILE_FOLDER+getFileName(ts.image), margin:ts.margin||0, spacing:ts.spacing||0 });
       continue;
     }
-
-    const fileName = getFileName(ts.source);
-    const config = fileName ? TILESET_CONFIG[fileName] : null;
-    if (!config) {
-      console.warn("Falta agregar a TILESET_CONFIG:", fileName || "(tileset sin nombre)");
-      continue;
-    }
-    tilesetRanges.push({
-      firstgid: ts.firstgid,
-      lastgid: nextFirstgid - 1,
-      columns: config.columns,
-      image: TILE_FOLDER + config.image,
-      margin: 0,
-      spacing: 0,
-    });
+    const fn = getFileName(ts.source);
+    const cfg = fn ? TILESET_CONFIG[fn] : null;
+    if (!cfg){ console.warn("Falta TILESET_CONFIG:", fn); continue; }
+    tilesetRanges.push({ firstgid:ts.firstgid, lastgid:next-1, columns:cfg.columns,
+      image:TILE_FOLDER+cfg.image, margin:0, spacing:0 });
   }
 }
 
-function loadImages() {
-  const promises = [];
-  const imagesToLoad = new Set(tilesetRanges.map(r => r.image));
-
-  const buttonOnConfig = TILESET_CONFIG["spr_groundswitch1_1.tsx"];
-  if (buttonOnConfig && buttonOnConfig.image) {
-    imagesToLoad.add(TILE_FOLDER + buttonOnConfig.image);
-  }
-
-  for (const imagePath of imagesToLoad) {
-    if (loadedImages[imagePath]) continue;
+function loadImages(){
+  const set = new Set(tilesetRanges.map(r=>r.image));
+  set.add(SPIKE_HIGH); set.add(SPIKE_LOW);
+  const btn = TILESET_CONFIG["spr_groundswitch1_1.tsx"];
+  if (btn) set.add(TILE_FOLDER+btn.image);
+  const proms = [];
+  for (const path of set){
+    if (loadedImages[path]) continue;
     const img = new Image();
-    const p = new Promise((resolve) => {
-      img.onload = resolve;
-      img.onerror = () => { console.error("No se pudo cargar imagen:", imagePath); img.failed = true; resolve(); };
-    });
-    img.src = imagePath;
-    loadedImages[imagePath] = img;
-    promises.push(p);
+    proms.push(new Promise(res=>{ img.onload=res; img.onerror=()=>{ img.failed=true; res(); }; img.src=path; }));
+    loadedImages[path]=img;
   }
-  return Promise.all(promises);
+  return Promise.all(proms);
 }
 
-// ---------------------------------------------------------------------
-// 2. DECODIFICAR CAPAS (soporta chunks base64, base64 entero y CSV)
-// ---------------------------------------------------------------------
+// ---------- decode ----------
 const FLIP_MASK = 0x1FFFFFFF;
-
-function decodeChunkData(base64) {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  const gids = new Uint32Array(bytes.buffer);
-  return gids;
+function decodeChunkData(b64){
+  const bin = atob(b64); const bytes = new Uint8Array(bin.length);
+  for (let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  return new Uint32Array(bytes.buffer);
 }
-
-function getLayerTiles(layer) {
-  const tiles = [];
-
-  if (layer.chunks) {
-    for (const chunk of layer.chunks) {
-      const gids = decodeChunkData(chunk.data);
-      for (let row = 0; row < chunk.height; row++) {
-        for (let col = 0; col < chunk.width; col++) {
-          const gid = gids[row * chunk.width + col] & FLIP_MASK;
-          if (gid === 0) continue;
-          tiles.push({ gid, tileX: chunk.x + col, tileY: chunk.y + row });
-        }
+function getLayerTiles(layer){
+  const tiles=[];
+  if (layer.chunks){
+    for (const ch of layer.chunks){
+      const g = decodeChunkData(ch.data);
+      for (let r=0;r<ch.height;r++) for (let c=0;c<ch.width;c++){
+        const gid = g[r*ch.width+c] & FLIP_MASK; if(!gid) continue;
+        tiles.push({gid, tileX:ch.x+c, tileY:ch.y+r});
       }
     }
     return tiles;
   }
-
-  if (typeof layer.data === "string") {
-    const gids = decodeChunkData(layer.data);
-    for (let row = 0; row < layer.height; row++) {
-      for (let col = 0; col < layer.width; col++) {
-        const gid = gids[row * layer.width + col] & FLIP_MASK;
-        if (gid === 0) continue;
-        tiles.push({ gid, tileX: col, tileY: row });
-      }
+  if (typeof layer.data === "string"){
+    const g = decodeChunkData(layer.data);
+    for (let r=0;r<layer.height;r++) for (let c=0;c<layer.width;c++){
+      const gid = g[r*layer.width+c] & FLIP_MASK; if(!gid) continue;
+      tiles.push({gid, tileX:c, tileY:r});
     }
     return tiles;
   }
-
-  if (Array.isArray(layer.data)) {
-    for (let row = 0; row < layer.height; row++) {
-      for (let col = 0; col < layer.width; col++) {
-        const gid = layer.data[row * layer.width + col] & FLIP_MASK;
-        if (gid === 0) continue;
-        tiles.push({ gid, tileX: col, tileY: row });
-      }
+  if (Array.isArray(layer.data)){
+    for (let r=0;r<layer.height;r++) for (let c=0;c<layer.width;c++){
+      const gid = layer.data[r*layer.width+c] & FLIP_MASK; if(!gid) continue;
+      tiles.push({gid, tileX:c, tileY:r});
     }
   }
-
   return tiles;
 }
-
-const TILE_LAYER_NAMES = ["background", "Piso", "Paredes", "Detalles-Piso", "Detalles-Pared", "Objeto"];
+const TILE_LAYER_NAMES = ["background","Piso","Paredes","Detalles-Piso","Detalles-Pared","Objeto"];
 const decodedLayers = {};
-
-function decodeAllLayers() {
-  for (const name of TILE_LAYER_NAMES) {
-    const layer = mapData.layers.find(l => l.name === name);
-    if (layer) decodedLayers[name] = getLayerTiles(layer);
+function decodeAllLayers(){
+  for (const n of TILE_LAYER_NAMES){
+    const l = mapData.layers.find(x=>x.name===n);
+    if (l) decodedLayers[n] = getLayerTiles(l);
   }
 }
-
-function computeWorldBounds() {
-  let minTX = Infinity, minTY = Infinity, maxTX = -Infinity, maxTY = -Infinity;
-
-  for (const name of TILE_LAYER_NAMES) {
-    const tiles = decodedLayers[name];
-    if (!tiles) continue;
-    for (const t of tiles) {
-      if (t.tileX < minTX) minTX = t.tileX;
-      if (t.tileY < minTY) minTY = t.tileY;
-      if (t.tileX + 1 > maxTX) maxTX = t.tileX + 1;
-      if (t.tileY + 1 > maxTY) maxTY = t.tileY + 1;
+function computeWorldBounds(){
+  let a=Infinity,b=Infinity,c=-Infinity,d=-Infinity;
+  for (const n of TILE_LAYER_NAMES){
+    const t = decodedLayers[n]; if(!t) continue;
+    for (const q of t){
+      if(q.tileX<a)a=q.tileX; if(q.tileY<b)b=q.tileY;
+      if(q.tileX+1>c)c=q.tileX+1; if(q.tileY+1>d)d=q.tileY+1;
     }
   }
-
-  if (minTX === Infinity) {
-    minTX = 0; minTY = 0; maxTX = mapData.width; maxTY = mapData.height;
-  }
-
-  worldBounds = {
-    minX: minTX * TILE_W,
-    minY: minTY * TILE_H,
-    maxX: maxTX * TILE_W,
-    maxY: maxTY * TILE_H,
-  };
+  if (a===Infinity){ a=0;b=0;c=mapData.width;d=mapData.height; }
+  worldBounds = { minX:a*TILE_W, minY:b*TILE_H, maxX:c*TILE_W, maxY:d*TILE_H };
 }
 
-// ---------------------------------------------------------------------
-// HELPERS
-// ---------------------------------------------------------------------
-function propsToObject(obj) {
-  const result = {};
-  if (obj.properties) {
-    for (const p of obj.properties) result[p.name] = p.value;
-  }
-  return result;
-}
-
-function rectsOverlap(a, b) {
-  return (
-    a.x < b.x + b.width &&
-    a.x + a.width > b.x &&
-    a.y < b.y + b.height &&
-    a.y + a.height > b.y
-  );
-}
-
-function findObjectByName(name) {
-  const buscado = String(name).trim();
-  for (const layer of mapData.layers) {
-    if (layer.type !== "objectgroup") continue;
-    for (const obj of layer.objects || []) {
-      if (obj.name && String(obj.name).trim() === buscado) return obj;
-    }
-  }
+// ---------- helpers ----------
+function propsToObject(o){ const r={}; if(o.properties) for(const p of o.properties) r[p.name]=p.value; return r; }
+function rectsOverlap(a,b){ return a.x<b.x+b.width && a.x+a.width>b.x && a.y<b.y+b.height && a.y+a.height>b.y; }
+function findObjectByName(n){
+  const q=String(n).trim();
+  for (const l of mapData.layers){ if(l.type!=="objectgroup") continue;
+    for (const o of (l.objects||[])) if (o.name && String(o.name).trim()===q) return o; }
   return null;
 }
-
-function getAbsolutePoints(obj) {
-  if (obj.polygon) {
-    return obj.polygon.map(p => ({ x: obj.x + p.x, y: obj.y + p.y }));
-  }
-  return [
-    { x: obj.x, y: obj.y },
-    { x: obj.x + obj.width, y: obj.y },
-    { x: obj.x + obj.width, y: obj.y + obj.height },
-    { x: obj.x, y: obj.y + obj.height },
-  ];
+function getAbsolutePoints(o){
+  if (o.polygon) return o.polygon.map(p=>({x:o.x+p.x,y:o.y+p.y}));
+  return [{x:o.x,y:o.y},{x:o.x+o.width,y:o.y},{x:o.x+o.width,y:o.y+o.height},{x:o.x,y:o.y+o.height}];
 }
-
-function pointInPolygon(px, py, points) {
-  let inside = false;
-  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
-    const xi = points[i].x, yi = points[i].y;
-    const xj = points[j].x, yj = points[j].y;
-    const intersect = ((yi > py) !== (yj > py)) &&
-      (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
-    if (intersect) inside = !inside;
+function pointInPolygon(px,py,pts){
+  let inside=false;
+  for (let i=0,j=pts.length-1;i<pts.length;j=i++){
+    const xi=pts[i].x,yi=pts[i].y,xj=pts[j].x,yj=pts[j].y;
+    if (((yi>py)!==(yj>py)) && (px < (xj-xi)*(py-yi)/(yj-yi)+xi)) inside=!inside;
   }
   return inside;
 }
 
-// ---------------------------------------------------------------------
-// 3. COLISIÓN DE PAREDES + PIEDRAS + PINCHOS
-// ---------------------------------------------------------------------
+// ---------- colisión (paredes + pinchos activos + piedras) ----------
 let wallObjects = [];
-
-function rectHitsWall(rect) {
-  if (wallObjects.some(obj => rectsOverlap(rect, obj))) return true;
-
-  // 🌵 Pinchos: bloquean SOLO mientras están activados.
-  // Cuando se completan los 2 puzzles, dejan de bloquear (el jugador pasa).
-  if (!spikesDesactivados() && spikes.some(sp => rectsOverlap(rect, sp))) return true;
-
-  // Las piedras también bloquean al jugador
-  return stones.some(s => rectsOverlap(rect, s));
+let spikes = [];
+function spikeOwner(num){ return (typeof SPIKE_PUZZLE!=="undefined" && SPIKE_PUZZLE[num]) || num; }
+function spikeDesactivado(sp){
+  const owner = spikeOwner(sp.num);
+  const piedra = !!(ESTADO && ESTADO.puzzlesPiedra && ESTADO.puzzlesPiedra[owner]);
+  if (!piedra) return false;
+  // Solo algunos pinchos (los que estén en SPIKE_REQUIERE_BOTONES) piden
+  // ADEMÁS el puzzle de botones completo. Los demás se apagan con la
+  // piedra sola.
+  if (typeof SPIKE_REQUIERE_BOTONES!=="undefined" && SPIKE_REQUIERE_BOTONES.includes(owner))
+    return !!(ESTADO && ESTADO.puzzleBotones);
+  return true;
+}
+function rectHitsWall(rect){
+  if (wallObjects.some(w=>rectsOverlap(rect,w))) return true;
+  if (spikes.some(s=>!spikeDesactivado(s) && rectsOverlap(rect,s))) return true;
+  return stones.some(s=>rectsOverlap(rect,s));
+}
+function moveWithWallCollision(p,dx,dy){
+  if (dx!==0){ const t={x:p.x+dx,y:p.y,width:p.width,height:p.height}; if(!rectHitsWall(t)) p.x+=dx; }
+  if (dy!==0){ const t={x:p.x,y:p.y+dy,width:p.width,height:p.height}; if(!rectHitsWall(t)) p.y+=dy; }
 }
 
-function moveWithWallCollision(player, dx, dy) {
-  if (dx !== 0) {
-    const testX = { x: player.x + dx, y: player.y, width: player.width, height: player.height };
-    if (!rectHitsWall(testX)) player.x += dx;
-  }
-  if (dy !== 0) {
-    const testY = { x: player.x, y: player.y + dy, width: player.width, height: player.height };
-    if (!rectHitsWall(testY)) player.y += dy;
-  }
+// ---------- caídas (cai) ----------
+let caidas=[];
+function initCaidas(){
+  caidas=[];
+  for (const l of mapData.layers){ if(l.type!=="objectgroup") continue;
+    for (const o of (l.objects||[])) if(o.name && /^cai$/i.test(o.name.trim()))
+      caidas.push(o); }
 }
-
-// ---------------------------------------------------------------------
-// 4. DOORS (puertas) + cambio de mapa con cuadrados de aparición
-// ---------------------------------------------------------------------
-let doors = [];
-let doorsByName = {};
-
-function getDefaultSpawn() {
-  const spawn = findObjectByName("Spawn") || findObjectByName("spawn");
-  if (spawn) {
-    return { x: spawn.x + (spawn.width || 0) / 2, y: spawn.y + (spawn.height || 0) / 2 };
-  }
-  return {
-    x: (worldBounds.minX + worldBounds.maxX) / 2,
-    y: (worldBounds.minY + worldBounds.maxY) / 2,
-  };
-}
-
-let doorTransition = null;
-let lastUsedDoor = null;
-const TRANSITION_HALF = 250;
-
-function isTransitioning() {
-  return doorTransition !== null;
-}
-
-function startDoorTransition(player, change) {
-  if (doorTransition) return;
-  doorTransition = { player, phase: "in", timer: 0, change };
-}
-
-async function performMapChange(player, change) {
-  if (change.targetMap && change.targetMap !== currentMapName) {
-    await loadMap(change.targetMap);
-  }
-
-  const square = findObjectByName(change.spawnSquareName);
-  let spawn;
-
-  if (square) {
-    spawn = {
-      x: square.x + (square.width || 0) / 2,
-      y: square.y + (square.height || 0) / 2,
-    };
-  } else {
-    console.warn(
-      `No se encontró el cuadrado "${change.spawnSquareName}" en ${currentMapName}. ` +
-      `Usando Spawn / centro del mapa como respaldo.`
-    );
-    spawn = getDefaultSpawn();
-  }
-
-  player.x = Math.round(spawn.x - player.width / 2);
-  player.y = Math.round(spawn.y - player.height / 2);
-
-  lastUsedDoor = doors.find(d => rectsOverlap(player, d)) || null;
-}
-
-function updateDoorTransition(deltaTime) {
-  if (!doorTransition) return;
-  const t = doorTransition;
-
-  if (t.phase === "in") {
-    t.timer += deltaTime;
-    if (t.timer >= TRANSITION_HALF) {
-      t.phase = "loading";
-      performMapChange(t.player, t.change)
-        .then(() => {
-          t.phase = "out";
-          t.timer = 0;
-        })
-        .catch(err => {
-          console.error("Error cambiando de mapa:", err);
-          t.phase = "out";
-          t.timer = 0;
-        });
-    }
-  } else if (t.phase === "out") {
-    t.timer += deltaTime;
-    if (t.timer >= TRANSITION_HALF) {
-      doorTransition = null;
-    }
-  }
-}
-
-function getTransitionAlpha() {
-  if (!doorTransition) return 0;
-  const t = doorTransition;
-  if (t.phase === "in") return Math.min(1, t.timer / TRANSITION_HALF);
-  if (t.phase === "loading") return 1;
-  return Math.max(0, 1 - t.timer / TRANSITION_HALF);
-}
-
-function drawTransitionOverlay(ctx, canvas) {
-  const alpha = getTransitionAlpha();
-  if (alpha <= 0) return;
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = "black";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.restore();
-}
-
-function checkDoors(player) {
-  if (isTransitioning()) return;
-
-  if (lastUsedDoor && !rectsOverlap(player, lastUsedDoor)) {
-    lastUsedDoor = null;
-  }
-
-  for (const door of doors) {
-    if (door === lastUsedDoor) continue;
-    if (rectsOverlap(player, door)) {
-      const props = propsToObject(door);
-
-      if (!props.targetMap) {
-        console.warn("La puerta", door.name, "no tiene la propiedad targetMap configurada");
-        return;
-      }
-
-      const change = {
-        targetMap: props.targetMap,
-        spawnSquareName: door.name.replace(/^ph/i, ""),
-      };
-
-      startDoorTransition(player, change);
+function checkCaidas(p){
+  if(isTransitioning()) return;
+  for (const c of caidas){
+    if(rectsOverlap(p,c)){
+      // Mismas coordenadas (x,y), pero en el mapa H5. duracion más larga = fade lento.
+      startDoorTransition(p, { targetMap:"H5", x:p.x, y:p.y, duracion:900 });
       break;
     }
   }
 }
 
-// ---------------------------------------------------------------------
-// 5. PUZZLE DE BOTONES (TB1..TB12)
-// ---------------------------------------------------------------------
-let buttons = [];
-let buttonsByName = {};
-
-const PUZZLE_CAPA_BOTONES_DEFAULT = "Interactuable-Piso";
-const PUZZLE_SECUENCIAS_DEFAULT = [[1, 3], [5, 7], [2, 9], [8, 12]];
-const PUZZLE_TIEMPO_LIMITE_DEFAULT = 5000;
-const PUZZLE_URL_GUARDAR_DEFAULT = "/Puzzle/Complete";
-
-function getPuzzleCapa() {
-  return (typeof PUZZLE_CAPA_BOTONES !== "undefined") ? PUZZLE_CAPA_BOTONES : PUZZLE_CAPA_BOTONES_DEFAULT;
+// ---------- puertas multi-mapa ----------
+let doors=[], doorsByName={};
+function getDefaultSpawn(){
+  const s = findObjectByName("Spawn")||findObjectByName("spawn");
+  if (s) return {x:s.x+(s.width||0)/2, y:s.y+(s.height||0)/2};
+  return {x:(worldBounds.minX+worldBounds.maxX)/2, y:(worldBounds.minY+worldBounds.maxY)/2};
 }
-function getPuzzleSecuencias() {
-  return (typeof PUZZLE_SECUENCIAS !== "undefined") ? PUZZLE_SECUENCIAS : PUZZLE_SECUENCIAS_DEFAULT;
+let doorTransition=null, lastUsedDoor=null;
+const TRANSITION_HALF=250;
+function isTransitioning(){ return doorTransition!==null; }
+function startDoorTransition(p,ch){ if(doorTransition) return; doorTransition={player:p,phase:"in",timer:0,change:ch,duracion:ch.duracion||TRANSITION_HALF}; }
+async function performMapChange(p,ch){
+  if (ch.targetMap && ch.targetMap!==currentMapName) await loadMap(ch.targetMap);
+  if (typeof ch.x==="number" && typeof ch.y==="number"){
+    // Coordenadas explícitas (ej: caídas): mismo lugar, mapa nuevo
+    p.x = ch.x; p.y = ch.y;
+  } else {
+    const sq = findObjectByName(ch.spawnSquareName);
+    const sp = sq ? {x:sq.x+(sq.width||0)/2, y:sq.y+(sq.height||0)/2} : getDefaultSpawn();
+    p.x=Math.round(sp.x-p.width/2); p.y=Math.round(sp.y-p.height/2);
+  }
+  lastUsedDoor = doors.find(d=>rectsOverlap(p,d))||null;
 }
-function getPuzzleTiempoLimite() {
-  return (typeof PUZZLE_TIEMPO_LIMITE !== "undefined") ? PUZZLE_TIEMPO_LIMITE : PUZZLE_TIEMPO_LIMITE_DEFAULT;
+function updateDoorTransition(dt){
+  if(!doorTransition) return;
+  const t=doorTransition;
+  if (t.phase==="in"){ t.timer+=dt; if(t.timer>=t.duracion){ t.phase="loading";
+      performMapChange(t.player,t.change).then(()=>{ t.phase="out"; t.timer=0; }).catch(()=>{ t.phase="out"; t.timer=0; }); } }
+  else if (t.phase==="out"){ t.timer+=dt; if(t.timer>=t.duracion) doorTransition=null; }
 }
-function getPuzzleUrlGuardar() {
-  return (typeof PUZZLE_URL_GUARDAR !== "undefined") ? PUZZLE_URL_GUARDAR : PUZZLE_URL_GUARDAR_DEFAULT;
+function getTransitionAlpha(){
+  if(!doorTransition) return 0;
+  const t=doorTransition;
+  if(t.phase==="in") return Math.min(1,t.timer/t.duracion);
+  if(t.phase==="loading") return 1;
+  return Math.max(0,1-t.timer/t.duracion);
 }
-
-let buttonOnImage = null;
-
-let puzzleRondaActual = 0;
-let puzzleEsperandoSegundo = false;
-let puzzleCompletado = false;
-let puzzleBotonesActivos = {};
-
-function activateButton(nombreBoton) {
-  puzzleBotonesActivos[nombreBoton] = Date.now() + getPuzzleTiempoLimite();
+function drawTransitionOverlay(ctx,cv){
+  const a=getTransitionAlpha(); if(a<=0) return;
+  ctx.save(); ctx.globalAlpha=a; ctx.fillStyle="black"; ctx.fillRect(0,0,cv.width,cv.height); ctx.restore();
 }
-
-function isButtonActive(nombreBoton) {
-  const expira = puzzleBotonesActivos[nombreBoton];
-  if (!expira) return false;
-  return Date.now() < expira;
-}
-
-function resetPuzzle() {
-  puzzleRondaActual = 0;
-  puzzleEsperandoSegundo = false;
-  puzzleBotonesActivos = {};
-  console.log("🔴 Puzzle reiniciado");
-}
-
-function cleanupExpiredButtons() {
-  const ahora = Date.now();
-  const secuencias = getPuzzleSecuencias();
-
-  for (const nombre in puzzleBotonesActivos) {
-    if (ahora >= puzzleBotonesActivos[nombre]) {
-      delete puzzleBotonesActivos[nombre];
-
-      if (puzzleEsperandoSegundo) {
-        const secuencia = secuencias[puzzleRondaActual];
-        if (secuencia) {
-          const nombrePrimerBoton = "TB" + secuencia[0];
-          if (nombre === nombrePrimerBoton) {
-            console.log("⏰ Tiempo agotado, reiniciando puzzle");
-            resetPuzzle();
-          }
-        }
-      }
+function checkDoors(p){
+  if(isTransitioning()) return;
+  if(lastUsedDoor && !rectsOverlap(p,lastUsedDoor)) lastUsedDoor=null;
+  for (const d of doors){
+    if(d===lastUsedDoor) continue;
+    if(rectsOverlap(p,d)){
+      const pr=propsToObject(d);
+      if(!pr.targetMap){ console.warn("Puerta sin targetMap:", d.name); return; }
+      startDoorTransition(p,{ targetMap:pr.targetMap, spawnSquareName:d.name.replace(/^ph/i,"") });
+      break;
     }
   }
 }
 
-function checkButtons(player) {
-  if (isTransitioning()) return;
-
-  cleanupExpiredButtons();
-
-  const secuencias = getPuzzleSecuencias();
-
-  for (const button of buttons) {
-    if (!rectsOverlap(player, button)) continue;
-
-    const nombreBoton = button.name;
-    if (!/^TB\d+$/i.test(nombreBoton)) continue;
-    const numeroBoton = parseInt(nombreBoton.replace(/^TB/i, ""), 10);
-    if (isNaN(numeroBoton)) continue;
-
-    if (isButtonActive(nombreBoton)) continue;
-
-    if (!puzzleCompletado) {
-      const secuencia = secuencias[puzzleRondaActual];
-
-      if (secuencia) {
-        const esperadoPrimero = secuencia[0];
-        const esperadoSegundo = secuencia[1];
-
-        if (!puzzleEsperandoSegundo) {
-          if (numeroBoton === esperadoPrimero) {
-            puzzleEsperandoSegundo = true;
-            console.log(`✅ Ronda ${puzzleRondaActual + 1}: primer botón correcto (${nombreBoton})`);
-          } else {
-            console.log(`❌ Botón incorrecto (esperaba TB${esperadoPrimero}, tocaste ${nombreBoton})`);
-            resetPuzzle();
-          }
+// ---------- puzzle botones (TB) ----------
+let buttons=[], buttonsByName={};
+function getPuzzleCapa(){ return (typeof PUZZLE_CAPA_BOTONES!=="undefined")?PUZZLE_CAPA_BOTONES:"Interactuable-Piso"; }
+function getPuzzleSecuencias(){ return (typeof PUZZLE_SECUENCIAS!=="undefined")?PUZZLE_SECUENCIAS:[[1,3],[5,7],[2,9],[8,12]]; }
+function getPuzzleTiempo(){ return (typeof PUZZLE_TIEMPO_LIMITE!=="undefined")?PUZZLE_TIEMPO_LIMITE:5000; }
+let buttonOnImage=null;
+let puzzleRonda=0, puzzleEsperando=false, puzzleBotonesActivos={};
+function activateButton(n){ puzzleBotonesActivos[n]=Date.now()+getPuzzleTiempo(); }
+function isButtonActive(n){ const e=puzzleBotonesActivos[n]; return e? Date.now()<e : false; }
+function resetPuzzleBotones(){ puzzleRonda=0; puzzleEsperando=false; puzzleBotonesActivos={}; }
+function cleanupExpired(){
+  const ahora=Date.now(); const seq=getPuzzleSecuencias();
+  for (const n in puzzleBotonesActivos){
+    if (ahora>=puzzleBotonesActivos[n]){ delete puzzleBotonesActivos[n];
+      if (puzzleEsperando){ const s=seq[puzzleRonda]; if(s && n==="TB"+s[0]) resetPuzzleBotones(); } }
+  }
+}
+function checkButtons(p){
+  if(isTransitioning()) return;
+  cleanupExpired();
+  const seq=getPuzzleSecuencias();
+  for (const b of buttons){
+    if(!rectsOverlap(p,b)) continue;
+    if(!/^TB\d+$/i.test(b.name)) continue;
+    const num=parseInt(b.name.replace(/^TB/i,""),10); if(isNaN(num)) continue;
+    if(isButtonActive(b.name)) continue;
+    if (ESTADO && !ESTADO.puzzleBotones){
+      const s=seq[puzzleRonda];
+      if (s){
+        const e1=s[0], e2=s[1];
+        if(!puzzleEsperando){
+          if(num===e1){ puzzleEsperando=true; }
+          else resetPuzzleBotones();
         } else {
-          if (numeroBoton === esperadoSegundo) {
-            const nombrePrimerBoton = "TB" + esperadoPrimero;
-
-            if (isButtonActive(nombrePrimerBoton)) {
-              puzzleEsperandoSegundo = false;
-              puzzleRondaActual++;
-              console.log(`✅ Ronda ${puzzleRondaActual} completada`);
-
-              if (puzzleRondaActual >= secuencias.length) {
-                puzzleCompletado = true;
-                console.log("🎉 ¡PUZZLE COMPLETADO!");
-                guardarPuzzleEnBD();
-              }
-            } else {
-              console.log("⏰ El primer botón se apagó, reiniciando");
-              resetPuzzle();
-            }
-          } else if (numeroBoton !== esperadoPrimero) {
-            console.log(`❌ Botón incorrecto (esperaba TB${esperadoSegundo}, tocaste ${nombreBoton})`);
-            resetPuzzle();
-          }
+          if(num===e2){
+            if(isButtonActive("TB"+e1)){
+              puzzleEsperando=false; puzzleRonda++;
+              if(puzzleRonda>=seq.length){ ESTADO.puzzleBotones=true; }
+            } else resetPuzzleBotones();
+          } else if(num!==e1) resetPuzzleBotones();
         }
       }
     }
-
-    activateButton(nombreBoton);
-
+    activateButton(b.name);
     break;
   }
 }
-
-function guardarPuzzleEnBD() {
-  fetch(getPuzzleUrlGuardar(), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" }
-  })
-  .then(res => res.json())
-  .then(data => {
-    console.log("💾 Puzzle guardado en BD:", data);
-  })
-  .catch(err => {
-    console.error("❌ Error guardando puzzle:", err);
-  });
-}
-
-function drawButtonOverlays(ctx, canvas, camera) {
-  if (!buttonOnImage || !buttonOnImage.complete || buttonOnImage.failed) return;
-
-  const w = buttonOnImage.naturalWidth || TILE_W;
-  const h = buttonOnImage.naturalHeight || TILE_H;
-
-  for (const nombre in puzzleBotonesActivos) {
-    const button = buttonsByName[nombre];
-    if (!button) continue;
-
-    const centerX = button.x + (button.width || TILE_W) / 2;
-    const centerY = button.y + (button.height || TILE_H) / 2;
-
-    ctx.drawImage(
-      buttonOnImage,
-      Math.round(centerX - w / 2 - camera.x),
-      Math.round(centerY - h / 2 - camera.y),
-      w,
-      h
-    );
+function drawButtonOverlays(ctx,cv,cam){
+  if(!buttonOnImage||!buttonOnImage.complete||buttonOnImage.failed) return;
+  const w=buttonOnImage.naturalWidth||TILE_W, h=buttonOnImage.naturalHeight||TILE_H;
+  for (const n in puzzleBotonesActivos){
+    const b=buttonsByName[n]; if(!b) continue;
+    ctx.drawImage(buttonOnImage, Math.round(b.x+(b.width||TILE_W)/2 - w/2 - cam.x),
+      Math.round(b.y+(b.height||TILE_H)/2 - h/2 - cam.y), w, h);
   }
 }
 
-// ---------------------------------------------------------------------
-// 6. PUZZLE DE PIEDRAS (PIx empujables, PUZx cerco, PLx objetivo, RBx reset)
-// ---------------------------------------------------------------------
-let stones = [];
-let stoneTargets = [];
-let resetButtons = [];
-let puzzlePiedraCompletado = {};
-let rbStepped = new Set();
-
-const PIEDRA_VELOCIDAD = 3;
-
-function piedraSize() {
-  return Math.round((TILE_W / 2) * (4 / 3));
+// ---------- piedras (PIx) + PUZx + PLx + RBx ----------
+let stones=[], stoneTargets=[], resetButtons=[];
+const PIEDRA_VEL=3;
+function piedraSize(){ return Math.round((TILE_W/2)*(4/3)); }
+let piImage=null;
+function tileOwner(v,ts){ return Math.floor((v-0.001)/ts); }
+function tileDePiedra(s){ return { x:tileOwner(s.x+s.width/2,TILE_W), y:tileOwner(s.y+s.height/2,TILE_H) }; }
+function centrarPiedra(s){
+  const t=tileDePiedra(s);
+  const cx=t.x*TILE_W+(TILE_W-s.width)/2, cy=t.y*TILE_H+(TILE_H-s.height)/2;
+  const r={x:cx,y:cy,width:s.width,height:s.height};
+  const okA=!s.arenaPoints||stoneInArena(r,s.arenaPoints);
+  const okP=!wallObjects.some(w=>rectsOverlap(r,w));
+  if(okA&&okP){ s.x=cx; s.y=cy; }
 }
-
-let piImage = null;
-
-function tileDePiedra(stone) {
-  return {
-    x: tileOwner(stone.x + stone.width / 2, TILE_W),
-    y: tileOwner(stone.y + stone.height / 2, TILE_H),
-  };
+function stoneInArena(r,pts){
+  if(!pts) return true; const m=1;
+  return pointInPolygon(r.x+m,r.y+m,pts)&&pointInPolygon(r.x+r.width-m,r.y+m,pts)&&
+         pointInPolygon(r.x+m,r.y+r.height-m,pts)&&pointInPolygon(r.x+r.width-m,r.y+r.height-m,pts);
 }
-
-function tileOwner(v, tileSize) {
-  return Math.floor((v - 0.001) / tileSize);
-}
-
-function centrarPiedraEnSuCelda(s) {
-  const t = tileDePiedra(s);
-  const cx = t.x * TILE_W + (TILE_W - s.width) / 2;
-  const cy = t.y * TILE_H + (TILE_H - s.height) / 2;
-  const rect = { x: cx, y: cy, width: s.width, height: s.height };
-
-  const okArena = !s.arenaPoints || stoneInArena(rect, s.arenaPoints);
-  const okPared = !wallObjects.some(w => rectsOverlap(rect, w));
-
-  if (okArena && okPared) {
-    s.x = cx;
-    s.y = cy;
-  }
-}
-
-function stoneInArena(rect, arenaPoints) {
-  if (!arenaPoints) return true;
-  const m = 1;
-  return (
-    pointInPolygon(rect.x + m, rect.y + m, arenaPoints) &&
-    pointInPolygon(rect.x + rect.width - m, rect.y + m, arenaPoints) &&
-    pointInPolygon(rect.x + m, rect.y + rect.height - m, arenaPoints) &&
-    pointInPolygon(rect.x + rect.width - m, rect.y + rect.height - m, arenaPoints)
-  );
-}
-
-function celdaLibreParaPiedra(stone, tileX, tileY) {
-  const rect = {
-    x: tileX * TILE_W + (TILE_W - stone.width) / 2,
-    y: tileY * TILE_H + (TILE_H - stone.height) / 2,
-    width: stone.width,
-    height: stone.height,
-  };
-
-  if (stone.arenaPoints && !stoneInArena(rect, stone.arenaPoints)) return false;
-  if (wallObjects.some(w => rectsOverlap(rect, w))) return false;
-  if (stones.some(o => o !== stone && rectsOverlap(rect, o))) return false;
+function celdaLibrePiedra(s,tx,ty){
+  const r={x:tx*TILE_W+(TILE_W-s.width)/2, y:ty*TILE_H+(TILE_H-s.height)/2, width:s.width,height:s.height};
+  if(!stoneInArena(r,s.arenaPoints)) return false;
+  if(wallObjects.some(w=>rectsOverlap(r,w))) return false;
+  if(stones.some(o=>o!==s&&rectsOverlap(r,o))) return false;
   return true;
 }
-
-function initStoneObjects() {
-  stones = [];
-  stoneTargets = [];
-  resetButtons = [];
-  puzzlePiedraCompletado = {};
-  rbStepped = new Set();
-
-  const arenas = [];
-  for (const layer of mapData.layers) {
-    if (layer.type !== "objectgroup") continue;
-    for (const obj of layer.objects || []) {
-      if (obj.name && /^PUZ\d+$/i.test(obj.name)) {
-        arenas.push({
-          num: parseInt(obj.name.replace(/^PUZ/i, ""), 10),
-          points: getAbsolutePoints(obj),
-        });
-      }
-    }
-  }
-
-  function arenaFor(x, y) {
-    const byPoint = arenas.find(a => pointInPolygon(x, y, a.points));
-    if (byPoint) return byPoint;
-
-    const byBox = arenas.find(a => {
-      const xs = a.points.map(p => p.x);
-      const ys = a.points.map(p => p.y);
-      return x >= Math.min(...xs) && x <= Math.max(...xs) &&
-             y >= Math.min(...ys) && y <= Math.max(...ys);
-    });
-    if (byBox) {
-      console.warn(`⚠️ Arena asignada por bounding box (revisá el polígono PUZ${byBox.num} en Tiled)`);
-    }
-    return byBox || null;
-  }
-
-  const tam = piedraSize();
-
-  for (const layer of mapData.layers) {
-    if (layer.type !== "objectgroup") continue;
-    for (const obj of layer.objects || []) {
-      if (!obj.name) continue;
-
-      if (/^PI\d+$/i.test(obj.name)) {
-        const cx = obj.x + (obj.width || TILE_W) / 2;
-        const cy = obj.y + (obj.height || TILE_H) / 2;
-        const arena = arenaFor(cx, cy);
-
-        if (!arena) {
-          console.warn(`La piedra ${obj.name} no está dentro de ningún polígono PUZx: queda fija.`);
-        }
-
-        const s = {
-          name: obj.name,
-          num: parseInt(obj.name.replace(/^PI/i, ""), 10),
-          x: cx - tam / 2,
-          y: cy - tam / 2,
-          width: tam,
-          height: tam,
-          initX: 0,
-          initY: 0,
-          puzzle: arena ? arena.num : null,
-          arenaPoints: arena ? arena.points : null,
-          locked: false,
-          sliding: null,
-        };
-
-        snapStoneToGrid(s);
-        s.initX = s.x;
-        s.initY = s.y;
-
+function initStoneObjects(){
+  stones=[]; stoneTargets=[]; resetButtons=[];
+  const arenas=[];
+  for (const l of mapData.layers){ if(l.type!=="objectgroup") continue;
+    for (const o of (l.objects||[])) if(o.name && /^PUZ\d+$/i.test(o.name))
+      arenas.push({num:parseInt(o.name.replace(/^PUZ/i,""),10), points:getAbsolutePoints(o)}); }
+  const arenaFor=(x,y)=>arenas.find(a=>pointInPolygon(x,y,a.points))||null;
+  const tam=piedraSize();
+  for (const l of mapData.layers){ if(l.type!=="objectgroup") continue;
+    for (const o of (l.objects||[])){
+      if(!o.name) continue;
+      if(/^PI\d+$/i.test(o.name)){
+        const cx=o.x+(o.width||TILE_W)/2, cy=o.y+(o.height||TILE_H)/2;
+        const ar=arenaFor(cx,cy);
+        const s={name:o.name,num:parseInt(o.name.replace(/^PI/i,""),10),
+          x:cx-tam/2,y:cy-tam/2,width:tam,height:tam,initX:cx-tam/2,initY:cy-tam/2,
+          puzzle:ar?ar.num:null, arenaPoints:ar?ar.points:null, locked:false, sliding:null, targetName:null};
+        centrarPiedra(s); s.initX=s.x; s.initY=s.y;
         stones.push(s);
       }
-      else if (/^PL\d+$/i.test(obj.name)) {
-        const cx = obj.x + (obj.width || TILE_W) / 2;
-        const cy = obj.y + (obj.height || TILE_H) / 2;
-        const arena = arenaFor(cx, cy);
-
-        stoneTargets.push({
-          name: obj.name,
-          x: obj.x,
-          y: obj.y,
-          width: obj.width || TILE_W,
-          height: obj.height || TILE_H,
-          puzzle: arena ? arena.num : null,
-          occupied: false,
-        });
+      else if(/^PL\d+$/i.test(o.name)){
+        const cx=o.x+(o.width||TILE_W)/2, cy=o.y+(o.height||TILE_H)/2;
+        const ar=arenaFor(cx,cy);
+        stoneTargets.push({name:o.name,x:o.x,y:o.y,width:o.width||TILE_W,height:o.height||TILE_H,
+          puzzle:ar?ar.num:null, occupied:false});
       }
-      else if (/^RB\d+$/i.test(obj.name)) {
-        if (!obj.width && !obj.height) {
-          obj.width = TILE_W;
-          obj.height = TILE_H;
-          obj.x -= TILE_W / 2;
-          obj.y -= TILE_H / 2;
-        }
-
-        resetButtons.push({
-          name: obj.name,
-          num: parseInt(obj.name.replace(/^RB/i, ""), 10),
-          x: obj.x,
-          y: obj.y,
-          width: obj.width,
-          height: obj.height,
-        });
+      else if(/^RB\d+$/i.test(o.name)){
+        if(!o.width&&!o.height){ o.width=TILE_W; o.height=TILE_H; o.x-=TILE_W/2; o.y-=TILE_H/2; }
+        resetButtons.push({name:o.name,num:parseInt(o.name.replace(/^RB/i,""),10),x:o.x,y:o.y,width:o.width,height:o.height});
       }
     }
   }
+  // 🔑 Los RB también se registran en buttonsByName para que drawButtonOverlays
+  // pueda dibujarles el sprite prendido cuando se activan
+  for (const rb of resetButtons) buttonsByName[rb.name]=rb;
 
-  const ruta = (typeof PI_IMAGEN !== "undefined" && PI_IMAGEN) ? PI_IMAGEN : null;
-  if (ruta && !piImage) {
-    piImage = new Image();
-    piImage.onerror = () => {
-      console.error("No se pudo cargar PI_IMAGEN:", ruta);
-      piImage.failed = true;
-    };
-    piImage.src = ruta;
-  }
-}
-
-function snapStoneToGrid(s) {
-  const t = tileDePiedra(s);
-  const antesX = s.x;
-  const antesY = s.y;
-
-  s.x = t.x * TILE_W + (TILE_W - s.width) / 2;
-  s.y = t.y * TILE_H + (TILE_H - s.height) / 2;
-
-  if (!celdaLibreParaPiedra(s, t.x, t.y)) {
-    s.x = antesX;
-    s.y = antesY;
-  }
-}
-
-function hitsOtherStone(stone, rect) {
-  return stones.some(o => o !== stone && rectsOverlap(rect, o));
-}
-
-function findFreeTarget(stone, rect) {
-  return stoneTargets.find(t =>
-    t.puzzle === stone.puzzle &&
-    !t.occupied &&
-    rectsOverlap(rect, t)
-  ) || null;
-}
-
-function stepStone(s) {
-  const dir = s.sliding;
-  let moved = 0;
-
-  while (moved < PIEDRA_VELOCIDAD) {
-    const nx = s.x + dir.dx;
-    const ny = s.y + dir.dy;
-    const test = { x: nx, y: ny, width: s.width, height: s.height };
-
-    const target = findFreeTarget(s, test);
-    if (target) {
-      s.x = target.x + target.width / 2 - s.width / 2;
-      s.y = target.y + target.height / 2 - s.height / 2;
-      s.locked = true;
-      s.sliding = null;
-      target.occupied = true;
-      console.log(`🪨 ${s.name} llegó a ${target.name} y quedó trabada`);
-      checkPiedrasPuzzle(s.puzzle);
-      return;
-    }
-
-    if (hitsOtherStone(s, test)) {
-      centrarPiedraEnSuCelda(s);
-      s.sliding = null;
-      console.log(`🛑 ${s.name} frenó (otra piedra)`);
-      return;
-    }
-
-    if (wallObjects.some(w => rectsOverlap(test, w))) {
-      centrarPiedraEnSuCelda(s);
-      s.sliding = null;
-      console.log(`🛑 ${s.name} frenó (pared)`);
-      return;
-    }
-
-    if (s.arenaPoints && !stoneInArena(test, s.arenaPoints)) {
-      centrarPiedraEnSuCelda(s);
-      s.sliding = null;
-      console.log(`🛑 ${s.name} frenó (borde del polígono)`);
-      return;
-    }
-
-    const tileAhora = tileDePiedra(s);
-    const tileDespues = {
-      x: tileOwner(nx + s.width / 2, TILE_W),
-      y: tileOwner(ny + s.height / 2, TILE_H),
-    };
-    if ((tileDespues.x !== tileAhora.x || tileDespues.y !== tileAhora.y) &&
-        !celdaLibreParaPiedra(s, tileDespues.x, tileDespues.y)) {
-      centrarPiedraEnSuCelda(s);
-      s.sliding = null;
-      console.log(`🛑 ${s.name} frenó (borde), queda centrada en su bloque`);
-      return;
-    }
-
-    s.x = nx;
-    s.y = ny;
-    moved++;
-  }
-}
-
-// Empuje + deslizamiento. El empuje NO arranca al caminar:
-// solo arranca con la tecla E (ver empujarPiedra, la llama site.js).
-function updatePiedras(player, dx, dy) {
-  // 0) Red de seguridad: toda piedra quieta y destrabada queda centrada en su bloque
-  for (const s of stones) {
-    if (s.sliding || s.locked) continue;
-    const t = tileDePiedra(s);
-    const cx = t.x * TILE_W + TILE_W / 2;
-    const cy = t.y * TILE_H + TILE_H / 2;
-    const centroX = s.x + s.width / 2;
-    const centroY = s.y + s.height / 2;
-    if (Math.abs(centroX - cx) > 0.5 || Math.abs(centroY - cy) > 0.5) {
-      if (celdaLibreParaPiedra(s, t.x, t.y)) {
-        s.x = cx - s.width / 2;
-        s.y = cy - s.height / 2;
-      }
+  // Restaurar estado guardado de piedras de ESTE mapa (clave "mapa:nombre")
+  if (ESTADO && ESTADO.piedras){
+    const k=currentMapName+":";
+    for (const s of stones){
+      const g=ESTADO.piedras[k+s.name];
+      if (g){ s.x=g.x; s.y=g.y; s.locked=!!g.locked; s.targetName=g.targetName||null;
+        if (s.locked && s.targetName){ const t=stoneTargets.find(x=>x.name===s.targetName); if(t) t.occupied=true; } }
     }
   }
-
-  // 1) Avanzar las que ya están deslizando (el empuje lo inicia la tecla E)
-  for (const s of stones) {
-    if (s.sliding) stepStone(s);
-  }
 }
-
-// 🔑 Empuje manual con E: intenta arrancar el deslizamiento de la piedra
-// que esté delante del jugador, en la dirección que mira.
-// Devuelve true si alguna piedra arrancó (site.js lo usa en la tecla E).
-function empujarPiedra(player, dirX, dirY) {
-  if (isTransitioning()) return false;
-  if (dirX === 0 && dirY === 0) return false;
-
-  const margen = 6;
-  const expanded = {
-    x: player.x - margen,
-    y: player.y - margen,
-    width: player.width + margen * 2,
-    height: player.height + margen * 2,
-  };
-
-  for (const s of stones) {
-    if (s.locked || s.sliding) continue;
-    if (!rectsOverlap(expanded, s)) continue;
-
-    // La piedra tiene que estar efectivamente hacia donde mirás
-    const centroPlayerX = player.x + player.width / 2;
-    const centroPlayerY = player.y + player.height / 2;
-    const centroStoneX = s.x + s.width / 2;
-    const centroStoneY = s.y + s.height / 2;
-
-    const hacia = (dirX !== 0)
-      ? (dirX > 0 ? centroStoneX >= centroPlayerX : centroStoneX <= centroPlayerX)
-      : (dirY > 0 ? centroStoneY >= centroPlayerY : centroStoneY <= centroPlayerY);
-    if (!hacia) continue;
-
-    // Si la celda siguiente no es libre (borde/pared/piedra), no arranca
-    const t = tileDePiedra(s);
-    if (!celdaLibreParaPiedra(s, t.x + dirX, t.y + dirY)) continue;
-
-    s.sliding = { dx: dirX, dy: dirY };
-    console.log(`🪨 Empuje (E) ${s.name} ->`, dirX, dirY);
+function snapshotPiedras(){
+  if(!ESTADO) return;
+  if(!ESTADO.piedras) ESTADO.piedras={};
+  const k=currentMapName+":";
+  for (const s of stones) ESTADO.piedras[k+s.name]={x:s.x,y:s.y,locked:s.locked,targetName:s.targetName};
+}
+function hitsOtherStone(s,r){ return stones.some(o=>o!==s&&rectsOverlap(r,o)); }
+function findFreeTarget(s,r){ return stoneTargets.find(t=>t.puzzle===s.puzzle&&!t.occupied&&rectsOverlap(r,t))||null; }
+function stepStone(s){
+  const d=s.sliding; let moved=0;
+  while(moved<PIEDRA_VEL){
+    const nx=s.x+d.dx, ny=s.y+d.dy;
+    const r={x:nx,y:ny,width:s.width,height:s.height};
+    const t=findFreeTarget(s,r);
+    if (t){ s.x=t.x+t.width/2-s.width/2; s.y=t.y+t.height/2-s.height/2;
+      s.locked=true; s.sliding=null; s.targetName=t.name; t.occupied=true;
+      if(ESTADO){ if(!ESTADO.puzzlesPiedra) ESTADO.puzzlesPiedra={};
+        const pls=stoneTargets.filter(x=>x.puzzle===s.puzzle);
+        if (pls.every(x=>x.occupied)) ESTADO.puzzlesPiedra[s.puzzle]=true; }
+      snapshotPiedras(); return; }
+    if (hitsOtherStone(s,r)){ centrarPiedra(s); s.sliding=null; snapshotPiedras(); return; }
+    if (wallObjects.some(w=>rectsOverlap(r,w))){ centrarPiedra(s); s.sliding=null; snapshotPiedras(); return; }
+    if (s.arenaPoints && !stoneInArena(r,s.arenaPoints)){ centrarPiedra(s); s.sliding=null; snapshotPiedras(); return; }
+    const ta=tileDePiedra(s);
+    const td={x:tileOwner(nx+s.width/2,TILE_W), y:tileOwner(ny+s.height/2,TILE_H)};
+    if((td.x!==ta.x||td.y!==ta.y) && !celdaLibrePiedra(s,td.x,td.y)){ centrarPiedra(s); s.sliding=null; snapshotPiedras(); return; }
+    s.x=nx; s.y=ny; moved++;
+  }
+  snapshotPiedras();
+}
+function updatePiedras(p){
+  for (const s of stones){ if(s.sliding||s.locked) continue;
+    const t=tileDePiedra(s); const cx=t.x*TILE_W+TILE_W/2, cy=t.y*TILE_H+TILE_H/2;
+    if (Math.abs(s.x+s.width/2-cx)>0.5 || Math.abs(s.y+s.height/2-cy)>0.5) centrarPiedra(s); }
+  for (const s of stones) if(s.sliding) stepStone(s);
+}
+function empujarPiedra(p,dx,dy){
+  if(isTransitioning()||(!dx&&!dy)) return false;
+  const m=6; const ex={x:p.x-m,y:p.y-m,width:p.width+m*2,height:p.height+m*2};
+  for (const s of stones){
+    if(s.locked||s.sliding) continue;
+    if(!rectsOverlap(ex,s)) continue;
+    const cpx=p.x+p.width/2, cpy=p.y+p.height/2, csx=s.x+s.width/2, csy=s.y+s.height/2;
+    let dX=0,dY=0;
+    if(dx!==0) dX = (dx>0 ? (csx>=cpx) : (csx<=cpx)) ? Math.sign(dx) : 0;
+    else if(dy!==0) dY = (dy>0 ? (csy>=cpy) : (csy<=cpy)) ? Math.sign(dy) : 0;
+    if(!dX&&!dY) continue;
+    const t=tileDePiedra(s);
+    if(!celdaLibrePiedra(s,t.x+dX,t.y+dY)) continue;
+    s.sliding={dx:dX,dy:dY};
     return true;
   }
   return false;
 }
-
-function checkPiedrasPuzzle(num) {
-  const piedras = stones.filter(s => s.puzzle === num);
-  if (piedras.length === 0) return;
-
-  if (piedras.every(s => s.locked)) {
-    puzzlePiedraCompletado[num] = true;
-    console.log(`🎉 Puzzle PUZ${num} completado`);
-  }
+function resetPiedrasPuzzle(num){
+  for (const s of stones){ if(s.puzzle!==num) continue;
+    s.x=s.initX; s.y=s.initY; s.locked=false; s.sliding=null; s.targetName=null; }
+  for (const t of stoneTargets) if(t.puzzle===num) t.occupied=false;
+  if(ESTADO){ if(ESTADO.puzzlesPiedra) delete ESTADO.puzzlesPiedra[num]; snapshotPiedras(); }
 }
-
-function resetPiedrasPuzzle(num) {
-  for (const s of stones) {
-    if (s.puzzle !== num) continue;
-    s.x = s.initX;
-    s.y = s.initY;
-    s.locked = false;
-    s.sliding = null;
-  }
-  for (const t of stoneTargets) {
-    if (t.puzzle === num) t.occupied = false;
-  }
-  puzzlePiedraCompletado[num] = false;
-}
-
-function checkResetButtons(player) {
-  if (isTransitioning()) return;
-
-  const touched = new Set();
-  for (const rb of resetButtons) {
-    if (rectsOverlap(player, rb)) touched.add(rb.name);
-  }
-
-  for (const name of touched) {
-    if (rbStepped.has(name)) continue;
-    if (isButtonActive(name)) continue;
-
-    const rb = resetButtons.find(r => r.name === name);
-    if (!rb || isNaN(rb.num)) continue;
-
-    if (puzzlePiedraCompletado[rb.num]) {
-      console.log(`⛔ RB${rb.num}: el puzzle PUZ${rb.num} ya está completado, no se reinicia`);
-      continue;
-    }
-
+let rbStepped=new Set();
+function checkResetButtons(p){
+  if(isTransitioning()) return;
+  const touched=new Set();
+  for (const rb of resetButtons) if(rectsOverlap(p,rb)) touched.add(rb.name);
+  for (const n of touched){
+    if(rbStepped.has(n)) continue;
+    if(isButtonActive(n)) continue;   // 🔒 mientras está prendido (5s) no se repisa
+    const rb=resetButtons.find(r=>r.name===n); if(!rb||isNaN(rb.num)) continue;
+    if (ESTADO && ESTADO.puzzlesPiedra && ESTADO.puzzlesPiedra[rb.num]) continue; // ya completado
     resetPiedrasPuzzle(rb.num);
-    activateButton(name);
-    console.log(`🔄 Puzzle PUZ${rb.num} reiniciado desde 0`);
+    activateButton(n);                // 💡 animación de prendido 5s, igual que los TB
   }
-
-  rbStepped = touched;
+  rbStepped=touched;
 }
-
-function drawPIOverlays(ctx, canvas, camera) {
-  if (!piImage || !piImage.complete || piImage.failed) return;
-
-  const recortes = (typeof PI_RECORTES !== "undefined") ? PI_RECORTES : {};
-  const dx0 = (typeof PI_DX !== "undefined") ? PI_DX : 0;
-  const dy0 = (typeof PI_DY !== "undefined") ? PI_DY : 0;
-
-  for (const s of stones) {
-    const r = recortes[s.name] || recortes["*"];
-    if (!r) continue;
-
-    const sx = r[0], sy = r[1], sw = r[2], sh = r[3];
-
-    const destX = Math.round(s.x + s.width / 2 - sw / 2 + dx0 - camera.x);
-    const destY = Math.round(s.y + s.height / 2 - sh / 2 + dy0 - camera.y);
-
-    ctx.drawImage(piImage, sx, sy, sw, sh, destX, destY, sw, sh);
+function drawPIOverlays(ctx,cv,cam){
+  if(!piImage||!piImage.complete||piImage.failed) return;
+  const rec=(typeof PI_RECORTES!=="undefined")?PI_RECORTES:{};
+  const dx0=(typeof PI_DX!=="undefined")?PI_DX:0, dy0=(typeof PI_DY!=="undefined")?PI_DY:0;
+  for (const s of stones){
+    const r=rec[s.name]||rec["*"]; if(!r) continue;
+    ctx.drawImage(piImage, r[0],r[1],r[2],r[3],
+      Math.round(s.x+s.width/2-r[2]/2+dx0-cam.x), Math.round(s.y+s.height/2-r[3]/2+dy0-cam.y), r[2], r[3]);
   }
 }
 
-// ---------------------------------------------------------------------
-// 6b. PINCHOS (PINx): bloquean el paso hasta completar los 2 puzzles
-// ---------------------------------------------------------------------
-let spikes = [];
-let spikeImage0 = null; // spr_spiketile_0.png = pincho ACTIVADO (peligroso)
-let spikeImage1 = null; // spr_spiketile_1.png = pincho GUARDADO (se puede pasar)
-
-// ¿Se completaron los 2 primeros puzzles?
-//  1) El de tocar los botones TB en orden  -> puzzleCompletado
-//  2) El de llevar la piedra a la placa    -> algún puzzlePiedraCompletado en true
-// Si querés que exija TODOS los puzzles de piedra, cambiá .some( por .every(
-function spikesDesactivados() {
-  const botones = puzzleCompletado;
-  const piedras = Object.values(puzzlePiedraCompletado).some(v => v);
-  return botones && piedras;
+// ---------- pinchos (PINx) ----------
+function initSpikes(){
+  spikes=[];
+  for (const l of mapData.layers){ if(l.type!=="objectgroup") continue;
+    for (const o of (l.objects||[])) if(o.name && /^PIN\d+$/i.test(o.name))
+      spikes.push({name:o.name,num:parseInt(o.name.replace(/^PIN/i,""),10),x:o.x,y:o.y,width:o.width||TILE_W,height:o.height||TILE_H}); }
 }
-
-function initSpikeObjects() {
-  spikes = [];
-
-  for (const layer of mapData.layers) {
-    if (layer.type !== "objectgroup") continue;
-    for (const obj of layer.objects || []) {
-      if (obj.name && /^PIN\d+$/i.test(obj.name)) {
-        spikes.push({
-          name: obj.name,
-          x: obj.x,
-          y: obj.y,
-          width: obj.width || TILE_W,
-          height: obj.height || TILE_H,
-        });
-      }
-    }
-  }
-
-  if (!spikeImage0) {
-    spikeImage0 = new Image();
-    spikeImage0.src = TILE_FOLDER + "spr_spiketile_0_editado.png";
-  }
-  if (!spikeImage1) {
-    spikeImage1 = new Image();
-    spikeImage1.src = TILE_FOLDER + "spr_spiketile_1_editado.png";
+function drawSpikes(ctx,cam){
+  for (const sp of spikes){
+    const img = loadedImages[spikeDesactivado(sp)?SPIKE_LOW:SPIKE_HIGH];
+    if(!img||!img.complete||img.failed) continue;
+    ctx.drawImage(img, Math.round(sp.x-cam.x), Math.round(sp.y-cam.y), sp.width, sp.height);
   }
 }
 
-// Dibuja los pinchos en su lugar: sprite 0 si están activados,
-// sprite 1 (guardados) si ya se completaron los 2 puzzles.
-function drawSpikes(ctx, camera) {
-  const img = spikesDesactivados() ? spikeImage1 : spikeImage0;
-  if (!img || !img.complete || img.naturalWidth === 0) return;
-
-  for (const sp of spikes) {
-    ctx.drawImage(
-      img,
-      Math.round(sp.x - camera.x),
-      Math.round(sp.y - camera.y),
-      sp.width,
-      sp.height
-    );
-  }
+// ---------- carteles (Cx) y guardado (GUAx) ----------
+let signs=[], guardados=[];
+function initSignObjects(){
+  signs=[]; guardados=[];
+  const cap = mapData.layers.find(l=>l.name==="Interactuable-Pared");
+  if (cap) for (const o of (cap.objects||[])) if(o.name && /^C\d+$/i.test(o.name)) signs.push(o);
+  for (const l of mapData.layers){ if(l.type!=="objectgroup") continue;
+    for (const o of (l.objects||[])) if(o.name && /^GUA\d+$/i.test(o.name)) guardados.push(o); }
 }
-
-// ---------------------------------------------------------------------
-// 6c. CARTELES (C1..C10)
-// ---------------------------------------------------------------------
-let signs = [];
-
-function initSignObjects() {
-  signs = [];
-
-  const layer = mapData.layers.find(l => l.name === "Interactuable-Pared");
-  if (!layer) return;
-
-  for (const obj of layer.objects || []) {
-    if (obj.name && /^C\d+$/i.test(obj.name)) {
-      signs.push(obj);
-    }
+function getSignAtPlayer(p){
+  const h={x:p.x-8,y:p.y-8,width:p.width+16,height:p.height+16};
+  for (const s of signs) if(rectsOverlap(h,s)){
+    const t=(typeof CARTELES_TEXTOS!=="undefined")?CARTELES_TEXTOS:{};
+    return {name:s.name, texto:t[s.name]||t["*"]||""};
   }
+  return null;
 }
-
-function getSignAtPlayer(player) {
-  const hit = {
-    x: player.x - 8,
-    y: player.y - 8,
-    width: player.width + 16,
-    height: player.height + 16,
-  };
-
-  for (const s of signs) {
-    if (rectsOverlap(hit, s)) {
-      const textos = (typeof CARTELES_TEXTOS !== "undefined") ? CARTELES_TEXTOS : {};
-      return {
-        name: s.name,
-        texto: textos[s.name] || textos["*"] || "peronesrico",
-      };
-    }
-  }
-
+function getGuardadoAtPlayer(p){
+  const h={x:p.x-8,y:p.y-8,width:p.width+16,height:p.height+16};
+  for (const g of guardados) if(rectsOverlap(h,g)) return g;
   return null;
 }
 
-// ---------------------------------------------------------------------
-// 7. DIBUJADO
-// ---------------------------------------------------------------------
-function drawTile(ctx, gid, worldX, worldY, camera) {
-  const range = tilesetRanges.find(r => gid >= r.firstgid && gid <= r.lastgid);
-  if (!range) return;
-  const img = loadedImages[range.image];
-  if (!img || !img.complete || img.failed) return;
-
-  const localId = gid - range.firstgid;
-  const margin = range.margin || 0;
-  const spacing = range.spacing || 0;
-  const col = localId % range.columns;
-  const row = Math.floor(localId / range.columns);
-  const sx = margin + col * (TILE_W + spacing);
-  const sy = margin + row * (TILE_H + spacing);
-
-  const dx = Math.round(worldX * TILE_W - camera.x);
-  const dy = Math.round(worldY * TILE_H - camera.y);
-  ctx.drawImage(img, sx, sy, TILE_W, TILE_H, dx, dy, TILE_W, TILE_H);
+// ---------- dibujo ----------
+function drawTile(ctx,gid,wx,wy,cam){
+  const r=tilesetRanges.find(x=>gid>=x.firstgid&&gid<=x.lastgid); if(!r) return;
+  const img=loadedImages[r.image]; if(!img||!img.complete||img.failed) return;
+  const li=gid-r.firstgid; const col=li%r.columns, row=Math.floor(li/r.columns);
+  const sx=(r.margin||0)+col*(TILE_W+(r.spacing||0)), sy=(r.margin||0)+row*(TILE_H+(r.spacing||0));
+  ctx.drawImage(img,sx,sy,TILE_W,TILE_H, Math.round(wx*TILE_W-cam.x), Math.round(wy*TILE_H-cam.y), TILE_W,TILE_H);
+}
+function drawScene(ctx,cv,p,cam){
+  ctx.fillStyle="black"; ctx.fillRect(0,0,cv.width,cv.height);
+  if(!mapData) return;
+  const w=worldBounds.maxX-worldBounds.minX, h=worldBounds.maxY-worldBounds.minY;
+  if (w<=cv.width) cam.x=worldBounds.minX+(w-cv.width)/2;
+  else cam.x=Math.max(worldBounds.minX, Math.min(p.x-cv.width/2, worldBounds.maxX-cv.width));
+  if (h<=cv.height) cam.y=worldBounds.minY+(h-cv.height)/2;
+  else cam.y=Math.max(worldBounds.minY, Math.min(p.y-cv.height/2, worldBounds.maxY-cv.height));
+  cam.x=Math.round(cam.x); cam.y=Math.round(cam.y);
+  for (const n of TILE_LAYER_NAMES){ const t=decodedLayers[n]; if(!t) continue;
+    for (const q of t) drawTile(ctx,q.gid,q.tileX,q.tileY,cam); }
 }
 
-function drawScene(ctx, canvas, player, camera) {
-  ctx.fillStyle = "black";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  if (!mapData) return;
-
-  const w = worldBounds.maxX - worldBounds.minX;
-  const h = worldBounds.maxY - worldBounds.minY;
-
-  if (w <= canvas.width) {
-    camera.x = worldBounds.minX + (w - canvas.width) / 2;
-  } else {
-    camera.x = Math.max(worldBounds.minX, Math.min(player.x - canvas.width / 2, worldBounds.maxX - canvas.width));
-  }
-
-  if (h <= canvas.height) {
-    camera.y = worldBounds.minY + (h - canvas.height) / 2;
-  } else {
-    camera.y = Math.max(worldBounds.minY, Math.min(player.y - canvas.height / 2, worldBounds.maxY - canvas.height));
-  }
-
-  camera.x = Math.round(camera.x);
-  camera.y = Math.round(camera.y);
-
-  ctx.save();
-  ctx.beginPath();
-  // (el clip de room se mantiene si lo usás; los pinchos se dibujan adentro)
-  for (const name of TILE_LAYER_NAMES) {
-    const tiles = decodedLayers[name];
-    if (!tiles) continue;
-    for (const t of tiles) {
-      drawTile(ctx, t.gid, t.tileX, t.tileY, camera);
-    }
-  }
-
-  // 🌵 Pinchos encima de los tiles, debajo del jugador
-  drawSpikes(ctx, camera);
-
-  ctx.restore();
-}
-
-// ---------------------------------------------------------------------
-// 8. CARGA DE MAPAS
-// ---------------------------------------------------------------------
-async function loadMap(mapName) {
-  const url = MAPS_FOLDER + mapName + MAP_EXT;
-
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error(`No se pudo cargar el mapa: HTTP ${res.status} - ${url}`);
-  }
-
-  const texto = (await res.text()).trim();
-  if (texto.startsWith("<")) {
-    throw new Error(
-      `"${url}" no es JSON (.tmj). ¿Es un .tmx (XML)? El juego necesita el formato JSON.`
-    );
-  }
-
-  mapData = JSON.parse(texto);
-  TILE_W = mapData.tilewidth || 20;
-  TILE_H = mapData.tileheight || 20;
-  currentMapName = mapName;
-
-  tilesetRanges.length = 0;
-  for (const k in decodedLayers) delete decodedLayers[k];
-
-  initMapObjects();
-  initStoneObjects();
-  initSpikeObjects();
-  initSignObjects();
-  buildTilesetRanges();
-  decodeAllLayers();
-  computeWorldBounds();
+// ---------- carga de mapa ----------
+async function loadMap(name){
+  const url=MAPS_FOLDER+name+MAP_EXT;
+  const res=await fetch(url,{cache:"no-store"});
+  if(!res.ok) throw new Error("No se pudo cargar el mapa "+res.status);
+  const txt=(await res.text()).trim();
+  if(txt.startsWith("<")) throw new Error("El mapa no es JSON");
+  mapData=JSON.parse(txt);
+  TILE_W=mapData.tilewidth||20; TILE_H=mapData.tileheight||20;
+  currentMapName=name;
+  if (ESTADO) ESTADO.mapaActual=name;
+  tilesetRanges.length=0; for (const k in decodedLayers) delete decodedLayers[k];
+  initMapObjects(); initStoneObjects(); initSpikes(); initSignObjects(); initCaidas();
+  buildTilesetRanges(); decodeAllLayers(); computeWorldBounds();
   await loadImages();
-
-  console.log(
-    "Mapa cargado:", currentMapName,
-    "| contenido real:", worldBounds.minX + "," + worldBounds.minY,
-    "a", worldBounds.maxX + "," + worldBounds.maxY
-  );
+  // 🆕 Imagen de las piedras (recorte de piConfig). Sin esto, drawPIOverlays no dibuja nada.
+  const ruta=(typeof PI_IMAGEN!=="undefined"&&PI_IMAGEN)?PI_IMAGEN:null;
+  if(ruta&&!piImage){ piImage=new Image(); piImage.onerror=()=>{ piImage.failed=true; }; piImage.src=ruta; }
+}
+function initMapObjects(){
+  const wl=mapData.layers.find(l=>l.name==="Interactuable");
+  wallObjects = wl ? wl.objects.filter(o=>{
+    if(!o.name) return true;
+    if(/^(PI|PL|RB|PUZ|PIN)\d+$/i.test(o.name)) return false;
+    if(/^cai$/i.test(o.name.trim())) return false;
+    return true;
+  }) : [];
+  const dl=mapData.layers.find(l=>l.name==="Doors");
+  doors = dl?dl.objects:[]; doorsByName={}; for (const d of doors) doorsByName[d.name]=d;
+  const bl=mapData.layers.find(l=>l.name===getPuzzleCapa());
+  buttons = bl?bl.objects:[]; buttonsByName={}; for (const b of buttons) if(b.name) buttonsByName[b.name]=b;
+  const bc=TILESET_CONFIG["spr_groundswitch1_1.tsx"];
+  if (bc && !buttonOnImage){ buttonOnImage=new Image(); buttonOnImage.src=TILE_FOLDER+bc.image; }
 }
 
-function initMapObjects() {
-  const wallsLayer = mapData.layers.find(l => l.name === "Interactuable");
-  // 🪨 Excluye objetos de puzzle (PI/PL/RB/PUZ/PIN) de las paredes:
-  // su bloqueo lo maneja el código (piedras y pinchos), no la capa.
-  wallObjects = wallsLayer
-    ? wallsLayer.objects.filter(o => !o.name || !/^(PI|PL|RB|PUZ|PIN)\d+$/i.test(o.name))
-    : [];
-
-  const doorsLayer = mapData.layers.find(l => l.name === "Doors");
-  doors = doorsLayer ? doorsLayer.objects : [];
-  doorsByName = {};
-  for (const d of doors) doorsByName[d.name] = d;
-
-  const nombreCapaBotones = getPuzzleCapa();
-  const buttonsLayer = mapData.layers.find(l => l.name === nombreCapaBotones);
-  buttons = buttonsLayer ? buttonsLayer.objects : [];
-  buttonsByName = {};
-  for (const b of buttons) {
-    if (b.name) buttonsByName[b.name] = b;
-  }
-
-  const buttonOnConfig = TILESET_CONFIG["spr_groundswitch1_1.tsx"];
-  if (buttonOnConfig && buttonOnConfig.image) {
-    buttonOnImage = new Image();
-    buttonOnImage.src = TILE_FOLDER + buttonOnConfig.image;
-  }
-}
-
-// ---------------------------------------------------------------------
-// 9. INICIALIZACIÓN
-// ---------------------------------------------------------------------
-async function initMapRender() {
-  await loadMap(MAPA_INICIAL);
-
-  const spawn = getDefaultSpawn();
-  player.x = Math.round(spawn.x - player.width / 2);
-  player.y = Math.round(spawn.y - player.height / 2);
+// ---------- init ----------
+async function initMapRender(estado, mapaInicial){
+  ESTADO = estado;
+  await loadMap(mapaInicial || (estado && estado.mapaActual) || "H1");
+  return getDefaultSpawn();
 }

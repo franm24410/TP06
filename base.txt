@@ -1,0 +1,51 @@
+-- =====================================================
+-- SCRIPT COMPLETO DE BASE DE DATOS (desde 0)
+-- =====================================================
+
+-- 1) Base de datos (si no existe)
+IF DB_ID('JuegoDB') IS NULL
+    CREATE DATABASE JuegoDB;
+GO
+
+USE JuegoDB;
+GO
+
+-- 2) Tabla de usuarios (login / registro)
+IF OBJECT_ID('Usuario', 'U') IS NULL
+CREATE TABLE Usuario (
+    IdUsuario     INT IDENTITY(1,1) PRIMARY KEY,
+    NombreUsuario VARCHAR(50)  NOT NULL UNIQUE,
+    Contrasenia   VARCHAR(100) NOT NULL,
+    Nombre        VARCHAR(50)  NOT NULL,
+    Apellido      VARCHAR(50)  NOT NULL,
+    TipoUsuario   VARCHAR(20)  NOT NULL DEFAULT 'jugador'
+);
+GO
+
+-- 3) Tabla de partidas guardadas (una fila por usuario, JSON con todo el estado)
+IF OBJECT_ID('Partidas', 'U') IS NULL
+CREATE TABLE Partidas (
+    IdUsuario          INT PRIMARY KEY,
+    Datos              NVARCHAR(MAX) NOT NULL,
+    FechaActualizacion DATETIME NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT FK_Partidas_Usuario FOREIGN KEY (IdUsuario)
+        REFERENCES Usuario(IdUsuario)
+);
+GO
+
+-- 4) Tabla del puzzle de botones (la usa /Puzzle/Complete)
+IF OBJECT_ID('PuzzleCompletions', 'U') IS NULL
+CREATE TABLE PuzzleCompletions (
+    Id                 INT IDENTITY(1,1) PRIMARY KEY,
+    Completado         BIT NOT NULL,
+    PuzzlesCompletados INT NOT NULL,
+    Detalle            NVARCHAR(MAX) NULL,
+    FechaCompletado    DATETIME NOT NULL
+);
+GO
+
+-- 5) Usuario de prueba para que puedas entrar ya mismo
+IF NOT EXISTS (SELECT 1 FROM Usuario WHERE NombreUsuario = 'test')
+    INSERT INTO Usuario (NombreUsuario, Contrasenia, Nombre, Apellido, TipoUsuario)
+    VALUES ('test', '1234', 'Test', 'Jugador', 'jugador');
+GO

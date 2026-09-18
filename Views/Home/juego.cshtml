@@ -1,0 +1,46 @@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Juego - @ViewBag.Nombre</title>
+    <style>
+        body { margin:0; overflow:hidden; background:#000; height:100vh; display:flex; align-items:center; justify-content:center; }
+        canvas { background:#000; image-rendering:pixelated; width:min(1280px,95vw); height:min(960px,95vh); aspect-ratio:4/3; }
+
+        /* GUI genérica centrada */
+        .gui { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.45); z-index:10; }
+        .gui.abierto { display:flex; }
+        .gui .caja { background:#000; border:4px solid #fff; border-radius:8px; padding:24px 32px; max-width:480px; width:60%;
+                     color:#fff; font-family:'8bitoperator',monospace; font-size:18px; line-height:1.6; text-align:center; }
+        .gui button { margin-top:14px; padding:10px 22px; background:#4a4; color:#fff; border:none; border-radius:4px;
+                      font-family:'8bitoperator',monospace; font-size:16px; cursor:pointer; }
+        #salir { position:fixed; top:8px; right:12px; z-index:20; }
+    </style>
+</head>
+<body>
+    <canvas id="game" width="640" height="480"></canvas>
+    <a id="salir" href="/Home/Logout" style="color:#888;font-family:monospace;font-size:12px;">Salir</a>
+
+    <!-- GUI de cartel (C1..C10) -->
+    <div id="signGui" class="gui"><div class="caja" id="signGuiTexto"></div></div>
+
+    <!-- GUI de guardado (GUA1) -->
+    <div id="saveGui" class="gui">
+        <div class="caja">
+            <div>¿Querés guardar tu partida?</div>
+            <button id="btnGuardar">GUARDAR</button>
+            <div id="saveMsg" style="margin-top:8px;font-size:14px;color:#8f8;"></div>
+        </div>
+    </div>
+
+    <script> window.MAPA_INICIAL = "H1"; </script>
+    <script src="~/js/puzzleConfig.js"></script>
+    <script src="~/js/piConfig.js"></script>
+    <script src="~/js/mapRender.js"></script>
+    <script src="~/js/site.js"></script>
+    <script src="~/js/cartelesConfig.js"></script>
+</body>
+</html>

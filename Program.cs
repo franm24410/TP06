@@ -7,6 +7,14 @@ builder.Services.AddControllersWithViews();
 
 builder.Services.AddScoped<DB>();
 
+builder.Services.AddDistributedMemoryCache(); // Requerido para guardar las sesiones en memoria
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30); // Tiempo que dura la sesión inactiva
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -20,7 +28,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseRouting();
 
-
+app.UseSession(); 
 
 app.UseAuthorization();
 

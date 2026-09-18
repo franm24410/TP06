@@ -1,364 +1,149 @@
-﻿const canvas = document.getElementById("game");
+﻿// site.js — loop, input, estado de partida y GUIs (cartel + guardado)
+
+const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+let player = { x:0, y:0, width:20, height:20 };
+let camera = { x:0, y:0 };
+const speed = 5;
+let keys = {}, grupoActivo = null;
 
-
-let player = {
-    x: 1550,
-    y: 740,
-    width: 20,
-    height: 20
+// ---------- ESTADO DE PARTIDA (se guarda en BD) ----------
+let ESTADO = {
+  mapaActual: "H1",
+  jugador: { x:0, y:0 },
+  puzzleBotones: false,
+  puzzlesPiedra: {},
+  piedras: {}
 };
 
-let camera = { x: 0, y: 0 };
+// ---------- GUIs ----------
+const signGui = document.getElementById("signGui");
+const signGuiTexto = document.getElementById("signGuiTexto");
+const saveGui = document.getElementById("saveGui");
+const btnGuardar = document.getElementById("btnGuardar");
+const saveMsg = document.getElementById("saveMsg");
+let signAbierta = false, saveAbierta = false;
 
-let speed = 5;
+function abrirSign(t){ signGuiTexto.textContent=t; signGui.classList.add("abierto"); signAbierta=true; frenar(); }
+function cerrarSign(){ signGui.classList.remove("abierto"); signAbierta=false; }
+function abrirSave(){ saveGui.classList.add("abierto"); saveAbierta=true; saveMsg.textContent=""; frenar(); }
+function cerrarSave(){ saveGui.classList.remove("abierto"); saveAbierta=false; }
+function frenar(){ for (const k in keys) keys[k]=false; grupoActivo=null; }
 
-let keys = {};
-let grupoActivo = null;
-
-// ---------------------------------------------------------------------
-// GUI DE CARTELES
-// ---------------------------------------------------------------------
-let signGuiAbierta = false;
-
-function abrirSignGui(texto) {
-    if (signGuiAbierta) return;   // si ya está abierto, no hace nada
-
-    const gui = document.getElementById("signGui");
-    const box = document.getElementById("signGuiTexto");
-    if (!gui || !box) return;
-
-    box.textContent = "";          // limpia cualquier texto anterior
-    box.textContent = String(texto);
-    gui.classList.add("abierto");
-    signGuiAbierta = true;
-
-    // Frena el movimiento en seco mientras leés
-    for (const k in keys) keys[k] = false;
-    grupoActivo = null;
-}
-
-function cerrarSignGui() {
-    const gui = document.getElementById("signGui");
-    if (!gui) return;
-
-    gui.classList.remove("abierto");
-    signGuiAbierta = false;
-}
-
-// Convierte la dirección que mira el personaje en un vector
-function dirDesdeDireccion(d) {
-    if (d === "up") return { x: 0, y: -1 };
-    if (d === "down") return { x: 0, y: 1 };
-    if (d === "left") return { x: -1, y: 0 };
-    return { x: 1, y: 0 };
-}
-
-// ---------------------------------------------------------------------
-// TECLADO
-// ---------------------------------------------------------------------
-document.addEventListener("keydown", function(event) {
-    if (event.repeat) return;   // ignora la repetición automática al mantener la tecla
-
-    let tecla = event.key.toLowerCase();
-
-    // Con la GUI abierta: CUALQUIER tecla la cierra y no hace nada más
-    if (signGuiAbierta) {
-        cerrarSignGui();
-        event.preventDefault();
-        return;
-    }
-
-    // Con E: primero cartel, después empuje de piedra
-    if (tecla === "e") {
-        // 1) ¿Hay un cartel acá? -> se lee
-        const cartel = getSignAtPlayer(player);
-        if (cartel) {
-            abrirSignGui(cartel.texto);
-            event.preventDefault();
-            return;
-        }
-
-        // 2) ¿Hay una piedra tocándome hacia donde miro? -> se empuja
-        const d = dirDesdeDireccion(direccionActual);
-        if (empujarPiedra(player, d.x, d.y)) {
-            event.preventDefault();
-            return;
-        }
-    }
-
-    if (tecla.startsWith("arrow")) {
-        event.preventDefault();
-    }
-
-    if (["w", "a", "s", "d"].includes(tecla)) {
-        if (grupoActivo === null) {
-            grupoActivo = "wasd";
-        }
-
-        if (grupoActivo === "wasd") {
-            keys[tecla] = true;
-        }
-    }
-
-    if (["arrowup", "arrowdown", "arrowleft", "arrowright"].includes(tecla)) {
-        if (grupoActivo === null) {
-            grupoActivo = "flechas";
-        }
-
-        if (grupoActivo === "flechas") {
-            keys[tecla] = true;
-        }
-    }
+btnGuardar.addEventListener("click", () => {
+  snapshotPiedras();
+  ESTADO.jugador = { x: player.x, y: player.y };
+  fetch("/Partida/Guardar", {
+    method:"POST", headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ Datos: JSON.stringify(ESTADO) })
+  }).then(r=>r.json()).then(()=>{
+    saveMsg.textContent = "✔ Partida guardada";
+    setTimeout(cerrarSave, 700);
+  }).catch(()=>{ saveMsg.textContent="✖ Error al guardar"; });
 });
 
-document.addEventListener("keyup", function(event) {
-    let tecla = event.key.toLowerCase();
+// ---------- input ----------
+document.addEventListener("keydown", (e)=>{
+  if (e.repeat) return;
+  const tecla = e.key.toLowerCase();
 
-    keys[tecla] = false;
+  if (signAbierta || saveAbierta){ cerrarSign(); cerrarSave(); e.preventDefault(); return; }
 
-    if (
-        !keys["w"] &&
-        !keys["a"] &&
-        !keys["s"] &&
-        !keys["d"] &&
-        grupoActivo === "wasd"
-    ) {
-        grupoActivo = null;
-    }
+  if (tecla === "e"){
+    const cartel = getSignAtPlayer(player);
+    if (cartel){ abrirSign(cartel.texto); e.preventDefault(); return; }
+    const gua = getGuardadoAtPlayer(player);
+    if (gua){ abrirSave(); e.preventDefault(); return; }
+    // empuje de piedra en la dirección que mira
+    const d = dirDesdeDireccion(direccionActual);
+    if (empujarPiedra(player, d.x, d.y)){ e.preventDefault(); return; }
+  }
 
-    if (
-        !keys["arrowup"] &&
-        !keys["arrowdown"] &&
-        !keys["arrowleft"] &&
-        !keys["arrowright"] &&
-        grupoActivo === "flechas"
-    ) {
-        grupoActivo = null;
-    }
+  if (tecla.startsWith("arrow")) e.preventDefault();
+  if (["w","a","s","d"].includes(tecla)){ if(grupoActivo===null) grupoActivo="wasd"; if(grupoActivo==="wasd") keys[tecla]=true; }
+  if (["arrowup","arrowdown","arrowleft","arrowright"].includes(tecla)){ if(grupoActivo===null) grupoActivo="flechas"; if(grupoActivo==="flechas") keys[tecla]=true; }
+});
+document.addEventListener("keyup", (e)=>{
+  const t=e.key.toLowerCase(); keys[t]=false;
+  if(!keys.w&&!keys.a&&!keys.s&&!keys.d&&grupoActivo==="wasd") grupoActivo=null;
+  if(!keys.arrowup&&!keys.arrowdown&&!keys.arrowleft&&!keys.arrowright&&grupoActivo==="flechas") grupoActivo=null;
 });
 
-// ---------------------------------------------------------------------
-// Sprites del personaje
-// ---------------------------------------------------------------------
+// ---------- sprites personaje ----------
 const spriteSources = {
-    idle: [
-        "/img/Caminar/spr_f_maincharad_0.png"
-    ],
-
-    down: [
-        "/img/Caminar/spr_f_maincharad_0.png",
-        "/img/Caminar/spr_f_maincharad_1.png",
-        "/img/Caminar/spr_f_maincharad_2.png",
-        "/img/Caminar/spr_f_maincharad_3.png"
-    ],
-
-    up: [
-        "/img/Caminar/spr_f_maincharau_0.png",
-        "/img/Caminar/spr_f_maincharau_1.png",
-        "/img/Caminar/spr_f_maincharau_2.png",
-        "/img/Caminar/spr_f_maincharau_3.png"
-    ],
-
-    left: [
-        "/img/Caminar/spr_f_maincharal_0.png",
-        "/img/Caminar/spr_f_maincharal_1.png"
-    ],
-
-    right: [
-        "/img/Caminar/spr_f_maincharar_0.png",
-        "/img/Caminar/spr_f_maincharar_1.png"
-    ]
+  idle:["/img/Caminar/spr_f_maincharad_0.png"],
+  down:["/img/Caminar/spr_f_maincharad_0.png","/img/Caminar/spr_f_maincharad_1.png","/img/Caminar/spr_f_maincharad_2.png","/img/Caminar/spr_f_maincharad_3.png"],
+  up:["/img/Caminar/spr_f_maincharau_0.png","/img/Caminar/spr_f_maincharau_1.png","/img/Caminar/spr_f_maincharau_2.png","/img/Caminar/spr_f_maincharau_3.png"],
+  left:["/img/Caminar/spr_f_maincharal_0.png","/img/Caminar/spr_f_maincharal_1.png"],
+  right:["/img/Caminar/spr_f_maincharar_0.png","/img/Caminar/spr_f_maincharar_1.png"]
 };
-
-// Precarga de imágenes
-const sprites = {};
-
-for (let direccion in spriteSources) {
-    sprites[direccion] = spriteSources[direccion].map(function(src) {
-        const img = new Image();
-
-        img.cargada = false;
-
-        img.onload = function() {
-            img.cargada = true;
-        };
-
-        img.onerror = function() {
-            console.warn("No se pudo cargar el sprite:", src);
-        };
-
-        img.src = src;
-
-        return img;
-    });
+const sprites={};
+for (const d in spriteSources){
+  sprites[d]=spriteSources[d].map(src=>{ const i=new Image(); i.cargada=false; i.onload=()=>i.cargada=true; i.src=src; return i; });
+}
+let direccionActual="down", frameActual=0, frameTimer=0;
+const frameDuracion=150;
+function dirDesdeDireccion(d){
+  if(d==="up")return{x:0,y:-1}; if(d==="down")return{x:0,y:1};
+  if(d==="left")return{x:-1,y:0}; return{x:1,y:0};
+}
+function actualizarDireccion(){
+  let dx=0,dy=0;
+  if(keys.a||keys.arrowleft)dx--; if(keys.d||keys.arrowright)dx++;
+  if(keys.w||keys.arrowup)dy--; if(keys.s||keys.arrowdown)dy++;
+  const mov=dx!==0||dy!==0;
+  if(dx<0)direccionActual="left"; else if(dx>0)direccionActual="right";
+  else if(dy<0)direccionActual="up"; else if(dy>0)direccionActual="down";
+  return mov;
+}
+function actualizarFrame(dt,mov){
+  if(!mov){ frameActual=0; frameTimer=0; return; }
+  frameTimer+=dt;
+  if(frameTimer>=frameDuracion){ frameTimer=0; frameActual=(frameActual+1)%sprites[direccionActual].length; }
 }
 
-// ---------------------------------------------------------------------
-// Animación
-// ---------------------------------------------------------------------
-let direccionActual = "down";
-let frameActual = 0;
-let frameTimer = 0;
-
-const frameDuracion = 150;
-
-function actualizarDireccion() {
-    let dx = 0;
-    let dy = 0;
-
-    if (keys["a"] || keys["arrowleft"]) {
-        dx -= 1;
-    }
-
-    if (keys["d"] || keys["arrowright"]) {
-        dx += 1;
-    }
-
-    if (keys["w"] || keys["arrowup"]) {
-        dy -= 1;
-    }
-
-    if (keys["s"] || keys["arrowdown"]) {
-        dy += 1;
-    }
-
-    const moviendose = dx !== 0 || dy !== 0;
-
-    if (dx < 0) {
-        direccionActual = "left";
-    }
-    else if (dx > 0) {
-        direccionActual = "right";
-    }
-    else if (dy < 0) {
-        direccionActual = "up";
-    }
-    else if (dy > 0) {
-        direccionActual = "down";
-    }
-
-    return moviendose;
+// ---------- update / draw ----------
+function update(dt){
+  if (isTransitioning()){ updateDoorTransition(dt); return; }
+  if (signAbierta || saveAbierta) return;
+  let dx=0,dy=0;
+  if(keys.w||keys.arrowup)dy-=speed; if(keys.s||keys.arrowdown)dy+=speed;
+  if(keys.a||keys.arrowleft)dx-=speed; if(keys.d||keys.arrowright)dx+=speed;
+  moveWithWallCollision(player,dx,dy);
+  updatePiedras(player);
+  checkResetButtons(player);
+  const mov=actualizarDireccion();
+  actualizarFrame(dt,mov);
+  checkDoors(player);
+  checkButtons(player);
+  checkCaidas(player);
+  ESTADO.jugador = { x: player.x, y: player.y };
 }
-
-function actualizarFrame(deltaTime, moviendose) {
-    if (!moviendose) {
-        frameActual = 0;
-        frameTimer = 0;
-        return;
-    }
-
-    frameTimer += deltaTime;
-
-    if (frameTimer >= frameDuracion) {
-        frameTimer = 0;
-
-        const totalFrames = sprites[direccionActual].length;
-
-        frameActual = (frameActual + 1) % totalFrames;
-    }
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawScene(ctx,canvas,player,camera);
+  drawSpikes(ctx,camera);
+  drawButtonOverlays(ctx,canvas,camera);
+  drawPIOverlays(ctx,canvas,camera);
+  // fallback a idle si el frame de la dirección aún no cargó
+  let sp=sprites[direccionActual][frameActual];
+  if(!sp||!sp.cargada) sp=sprites.idle[0];
+  if(sp&&sp.cargada) ctx.drawImage(sp, Math.round(player.x-camera.x), Math.round(player.y-camera.y), player.width, player.height);
+  drawTransitionOverlay(ctx,canvas);
 }
+let ultimo=0;
+function loop(ts){ const dt=ts-ultimo; ultimo=ts; update(dt||16); draw(); requestAnimationFrame(loop); }
 
-// ---------------------------------------------------------------------
-// Update
-// ---------------------------------------------------------------------
-function update(deltaTime) {
-    // Mientras dura la transición de puerta: solo avanza el timer
-    if (isTransitioning()) {
-        updateDoorTransition(deltaTime);
-        return;
+// ---------- arranque: cargar estado de BD y luego init ----------
+fetch("/Partida/Cargar")
+  .then(r=> r.ok ? r.json() : null)   // 🆕 si no hay sesión/respuesta, no explota
+  .then(data=>{
+    if (data && data.datos){
+      try { const p=JSON.parse(data.datos); Object.assign(ESTADO, p); } catch(e){}
     }
-
-    // Con la GUI del cartel abierta el juego queda pausado
-    if (signGuiAbierta) return;
-
-    let dx = 0;
-    let dy = 0;
-
-    if (keys["w"] || keys["arrowup"]) {
-        dy -= speed;
-    }
-
-    if (keys["s"] || keys["arrowdown"]) {
-        dy += speed;
-    }
-
-    if (keys["a"] || keys["arrowleft"]) {
-        dx -= speed;
-    }
-
-    if (keys["d"] || keys["arrowright"]) {
-        dx += speed;
-    }
-
-    moveWithWallCollision(player, dx, dy);
-
-    // 🪨 Piedras: centrado de seguridad + deslizamiento.
-    // El empuje ahora es MANUAL con la tecla E (empujarPiedra en el keydown).
-    updatePiedras(player);
-    checkResetButtons(player);
-
-    const moviendose = actualizarDireccion();
-
-    actualizarFrame(deltaTime, moviendose);
-
-    checkDoors(player);
-    checkButtons(player);
-}
-
-// ---------------------------------------------------------------------
-// Draw
-// ---------------------------------------------------------------------
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // 1. Mapa + cámara
-    drawScene(ctx, canvas, player, camera);
-
-    // 1b. Botones del puzzle prendidos
-    drawButtonOverlays(ctx, canvas, camera);
-
-    // 1c. Piedras del puzzle (posición viva, pegadas a su hitbox)
-    drawPIOverlays(ctx, canvas, camera);
-
-    // 2. Personaje
-    let spriteActual = sprites[direccionActual][frameActual];
-
-    if (!spriteActual || !spriteActual.cargada) {
-        spriteActual = sprites["idle"][0];
-    }
-
-    if (spriteActual && spriteActual.cargada) {
-        ctx.drawImage(
-            spriteActual,
-            player.x - camera.x,
-            player.y - camera.y,
-            player.width,
-            player.height
-        );
-    }
-
-    // 3. Overlay negro de transición de puertas
-    drawTransitionOverlay(ctx, canvas);
-}
-
-// ---------------------------------------------------------------------
-// Game loop
-// ---------------------------------------------------------------------
-let ultimoTimestamp = 0;
-
-function gameLoop(timestamp) {
-    const deltaTime = timestamp - ultimoTimestamp;
-
-    ultimoTimestamp = timestamp;
-
-    update(deltaTime || 16);
-
-    draw();
-
-    requestAnimationFrame(gameLoop);
-}
-
-initMapRender().then(function() {
-    requestAnimationFrame(gameLoop);
-});
+    return initMapRender(ESTADO, ESTADO.mapaActual || window.MAPA_INICIAL || "H1");
+  }).then(spawn=>{
+    if (ESTADO.jugador && (ESTADO.jugador.x||ESTADO.jugador.y)){ player.x=ESTADO.jugador.x; player.y=ESTADO.jugador.y; }
+    else { player.x=Math.round(spawn.x-player.width/2); player.y=Math.round(spawn.y-player.height/2); }
+    requestAnimationFrame(loop);
+  }).catch(err=>console.error(err));

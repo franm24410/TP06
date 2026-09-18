@@ -14,3 +14,7 @@ const PI_RECORTES = {
 // Ajuste fino de posición (en píxeles de mundo), por si queda corrido
 const PI_DX = 0;
 const PI_DY = 0;
+const SPIKE_PUZZLE = {
+    4: 3   // PIN4 -> PUZ3 (igual que PIN3)
+};
+const SPIKE_REQUIERE_BOTONES = [1]; 
