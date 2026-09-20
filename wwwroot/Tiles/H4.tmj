@@ -423,7 +423,7 @@
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":40.6667,
+                 "width":26.3333666666667,
                  "x":2781,
                  "y":-39
                 }, 
@@ -435,12 +435,12 @@
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":42,
-                 "x":2859.67,
+                 "width":30.6666666666665,
+                 "x":2871.00333333333,
                  "y":-40
                 }, 
                 {
-                 "height":38.6667,
+                 "height":23.0000333333333,
                  "id":300,
                  "name":"cai",
                  "opacity":1,
@@ -452,14 +452,14 @@
                  "y":120
                 }, 
                 {
-                 "height":22,
+                 "height":11.3333333333333,
                  "id":301,
                  "name":"cai",
                  "opacity":1,
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":99.6667,
+                 "width":56.6667000000002,
                  "x":2901,
                  "y":-41
                 }, 
@@ -471,57 +471,57 @@
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":42,
-                 "x":2940,
+                 "width":26.3333333333335,
+                 "x":2955.66666666667,
                  "y":22
                 }, 
                 {
-                 "height":34,
+                 "height":26,
                  "id":304,
                  "name":"cai",
                  "opacity":1,
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":30.3333,
+                 "width":20.3332999999998,
                  "x":2982,
-                 "y":7
+                 "y":15
                 }, 
                 {
-                 "height":180.667,
+                 "height":167.333666666667,
                  "id":305,
                  "name":"cai",
                  "opacity":1,
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":22,
-                 "x":3118.67,
-                 "y":-0.333333
+                 "width":18.3333333333335,
+                 "x":3122.33666666667,
+                 "y":13.0000003333333
                 }, 
                 {
-                 "height":181.333,
+                 "height":138.833,
                  "id":306,
                  "name":"cai",
                  "opacity":1,
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":40.6667,
-                 "x":3040,
-                 "y":-39.6667
+                 "width":18.3333666666672,
+                 "x":3051.33333333333,
+                 "y":2.8333
                 }, 
                 {
-                 "height":71.3333,
+                 "height":51.6666333333333,
                  "id":307,
                  "name":"cai",
                  "opacity":1,
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":33,
-                 "x":3006.67,
-                 "y":70
+                 "width":24.0000000000005,
+                 "x":3026.67,
+                 "y":89.6666666666667
                 }, 
                 {
                  "height":20.6667,
@@ -560,15 +560,15 @@
                  "y":8.33332
                 }, 
                 {
-                 "height":236.142292490119,
+                 "height":236.142,
                  "id":481,
                  "name":"caidaOrigen",
                  "opacity":1,
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":398.124505928854,
-                 "x":2779.87549407115,
+                 "width":398.125,
+                 "x":2779.88,
                  "y":-56
                 }, 
                 {

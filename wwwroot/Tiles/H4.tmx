@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="39" height="23" tilewidth="20" tileheight="20" infinite="1" nextlayerid="15" nextobjectid="483">
+ <editorsettings>
+  <export target="H4.tmj" format="json"/>
+ </editorsettings>
  <tileset firstgid="1" source="bg_ruinseasynam2.tsx"/>
  <tileset firstgid="73" source="bg_ruinseasynam3.tsx"/>
  <tileset firstgid="225" source="bg_tundratiles.tsx"/>
@@ -108,15 +111,15 @@
   <object id="476" x="2741.58" y="-199.606" width="64.1818" height="18.5455"/>
  </objectgroup>
  <objectgroup id="8" name="Interactuable-Piso">
-  <object id="298" name="cai" x="2781" y="-39" width="40.6667" height="118.667"/>
-  <object id="299" name="cai" x="2859.67" y="-40" width="42" height="159.333"/>
-  <object id="300" name="cai" x="2819" y="120" width="82.3333" height="38.6667"/>
-  <object id="301" name="cai" x="2901" y="-41" width="99.6667" height="22"/>
-  <object id="302" name="cai" x="2940" y="22" width="42" height="156.667"/>
-  <object id="304" name="cai" x="2982" y="7" width="30.3333" height="34"/>
-  <object id="305" name="cai" x="3118.67" y="-0.333333" width="22" height="180.667"/>
-  <object id="306" name="cai" x="3040" y="-39.6667" width="40.6667" height="181.333"/>
-  <object id="307" name="cai" x="3006.67" y="70" width="33" height="71.3333"/>
+  <object id="298" name="cai" x="2781" y="-39" width="26.3334" height="118.667"/>
+  <object id="299" name="cai" x="2871" y="-40" width="30.6667" height="159.333"/>
+  <object id="300" name="cai" x="2819" y="120" width="82.3333" height="23"/>
+  <object id="301" name="cai" x="2901" y="-41" width="56.6667" height="11.3333"/>
+  <object id="302" name="cai" x="2955.67" y="22" width="26.3333" height="156.667"/>
+  <object id="304" name="cai" x="2982" y="15" width="20.3333" height="26"/>
+  <object id="305" name="cai" x="3122.34" y="13" width="18.3333" height="167.334"/>
+  <object id="306" name="cai" x="3051.33" y="2.8333" width="18.3334" height="138.833"/>
+  <object id="307" name="cai" x="3026.67" y="89.6667" width="24" height="51.6666"/>
   <object id="477" name="5" x="2699.67" y="-120.667" width="20.6667" height="20.6667"/>
   <object id="478" name="7" x="2761.67" y="-137" width="20.6667" height="20.6667"/>
   <object id="480" name="10" x="3334.67" y="8.33332" width="20.6667" height="20.6667"/>
