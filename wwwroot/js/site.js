@@ -33,6 +33,7 @@ function frenar(){ for (const k in keys) keys[k]=false; grupoActivo=null; }
 btnGuardar.addEventListener("click", () => {
   snapshotPiedras();
   ESTADO.jugador = { x: player.x, y: player.y };
+  ESTADO.ultimoGuardado = { mapa: currentMapName, x: player.x, y: player.y };
   fetch("/Partida/Guardar", {
     method:"POST", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ Datos: JSON.stringify(ESTADO) })
@@ -136,41 +137,16 @@ function draw(){
 let ultimo=0;
 function loop(ts){ const dt=ts-ultimo; ultimo=ts; update(dt||16); draw(); requestAnimationFrame(loop); }
 
-// ---------- arranque: modo tutorial o juego normal ----------
-if (window.MODO_TUTORIAL) {
-  // Modo tutorial: saltar fetch, forzar H21 y spawn en spawnT
-  ESTADO.mapaActual = "H21";
-  initMapRender(ESTADO, "H21").then(spawn => {
-    // Buscar spawnT en los interactivos
-    const spawnT = window.habitacionActual?.Interactivos?.find(i => i.Nombre === 'spawnT');
-    if (spawnT) {
-      player.x = Math.round(spawnT.X - player.width / 2);
-      player.y = Math.round(spawnT.Y - player.height / 2);
-    } else {
-      player.x = Math.round(spawn.x - player.width / 2);
-      player.y = Math.round(spawn.y - player.height / 2);
+// ---------- arranque: cargar estado de BD y luego init ----------
+fetch("/Partida/Cargar")
+  .then(r=> r.ok ? r.json() : null)   // 🆕 si no hay sesión/respuesta, no explota
+  .then(data=>{
+    if (data && data.datos){
+      try { const p=JSON.parse(data.datos); Object.assign(ESTADO, p); } catch(e){}
     }
+    return initMapRender(ESTADO, ESTADO.mapaActual || window.MAPA_INICIAL || "H1");
+  }).then(spawn=>{
+    if (ESTADO.jugador && (ESTADO.jugador.x||ESTADO.jugador.y)){ player.x=ESTADO.jugador.x; player.y=ESTADO.jugador.y; }
+    else { player.x=Math.round(spawn.x-player.width/2); player.y=Math.round(spawn.y-player.height/2); }
     requestAnimationFrame(loop);
-  }).catch(err => {
-    console.error('Error cargando H21:', err);
-  });
-} else {
-  // Modo juego normal: cargar estado de BD
-  fetch("/Partida/Cargar")
-    .then(r => r.ok ? r.json() : null)
-    .then(data => {
-      if (data && data.datos) {
-        try { const p = JSON.parse(data.datos); Object.assign(ESTADO, p); } catch (e) {}
-      }
-      return initMapRender(ESTADO, ESTADO.mapaActual || window.MAPA_INICIAL || "H1");
-    }).then(spawn => {
-      if (ESTADO.jugador && (ESTADO.jugador.x || ESTADO.jugador.y)) {
-        player.x = ESTADO.jugador.x;
-        player.y = ESTADO.jugador.y;
-      } else {
-        player.x = Math.round(spawn.x - player.width / 2);
-        player.y = Math.round(spawn.y - player.height / 2);
-      }
-      requestAnimationFrame(loop);
-    }).catch(err => console.error(err));
-}
+  }).catch(err=>console.error(err));

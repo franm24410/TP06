@@ -51,14 +51,22 @@
 
         <div class="sb-hint" id="sbHint"></div>
 
-        <div class="sb-hud">
-            <div>
-            SANS
-            <div class="sb-barra-hp"><div class="sb-barra-hp-fill" id="sbSansHpFill"></div></div>
+    <div class="sb-totem" id="sbTotem">TOTEM</div>
+
+       <div class="sb-hud">
+            <div class="sb-hud-col">
+                <div class="sb-hud-nombre">SANS <span class="sb-hp-numero" id="sbSansHpNum"></span></div>
+                <div class="sb-barra-hp">
+                    <div class="sb-hp-roja" id="sbSansHpRoja"></div>
+                    <div class="sb-hp-fill" id="sbSansHpFill"></div>
+                </div>
             </div>
-            <div class="sb-hud-der">
-            VOS
-            <div class="sb-barra-hp"><div class="sb-barra-hp-fill" id="sbJugadorHpFill"></div></div>
+            <div class="sb-hud-col">
+                <div class="sb-hud-nombre">VOS <span class="sb-hp-numero" id="sbJugadorHpNum"></span></div>
+                <div class="sb-barra-hp">
+                    <div class="sb-hp-roja" id="sbJugadorHpRoja"></div>
+                    <div class="sb-hp-fill" id="sbJugadorHpFill"></div>
+                </div>
             </div>
         </div>
 
@@ -67,7 +75,7 @@
             <img src="/Battle/btn_mercy.png" id="sbBtnMercy" class="sb-boton" alt="MERCY">
         </div>
 
-        <button class="sb-reintentar" id="sbReintentar">REINTENTAR</button>
+    
     </div>
 
     <script> window.MAPA_INICIAL = "H1"; </script>

@@ -1188,10 +1188,7 @@ C:\Users\Usuario\OneDrive\Escritorio\TP06\obj\Debug\net9.0\ref\TP06.dll
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\w0qnrzqib2-{0}-6w0vaw6knh-6w0vaw6knh.gz
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\xcd1lz0x31-{0}-50h11pwztx-50h11pwztx.gz
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\idryrrq6w0-{0}-poktippgc6-poktippgc6.gz
-C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\0uen2ca4ee-{0}-5ty4pyevlx-5ty4pyevlx.gz
 C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\qujrake7r8-{0}-wgmxd1k6tp-wgmxd1k6tp.gz
-C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\aei97jjwiq-{0}-tu2leub9t7-tu2leub9t7.gz
-C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\9x5a2q6t6s-{0}-fnflxajysp-fnflxajysp.gz
 C:\Users\50235299\Desktop\TP06\bin\Debug\net9.0\System.Data.SqlClient.dll
 C:\Users\50235299\Desktop\TP06\bin\Debug\net9.0\System.Threading.RateLimiting.dll
 C:\Users\50235299\Desktop\TP06\bin\Debug\net9.0\runtimes\win-arm64\native\sni.dll
@@ -1208,3 +1205,6 @@ C:\Users\50235299\Desktop\TP06\obj\Debug\net9.0\compressed\k7zdob11ie-j1pu9ihlsy
 C:\Users\50235299\Desktop\TP06\obj\Debug\net9.0\compressed\50u4j4v7b2-zkqwuzgmkm.gz
 C:\Users\50235299\Desktop\TP06\obj\Debug\net9.0\compressed\myahdqiyrf-0ylvxmvrnc.gz
 C:\Users\50235299\Desktop\TP06\obj\Debug\net9.0\compressed\myogmasy63-fsxxabmafa.gz
+C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\9x5a2q6t6s-{0}-p7vsnvky5a-p7vsnvky5a.gz
+C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\0uen2ca4ee-{0}-ns2k8y8qna-ns2k8y8qna.gz
+C:\Users\Carlos\Desktop\TP06\obj\Debug\net9.0\compressed\aei97jjwiq-{0}-vxl0dsgm2a-vxl0dsgm2a.gz
