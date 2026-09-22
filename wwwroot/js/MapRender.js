@@ -206,6 +206,29 @@ function checkCaidas(p){
   }
 }
 
+// ---------- peleas (PELx) ----------
+// Hitbox que dispara una pelea contra un jefe (por ahora, PEL1 -> Sans).
+// window.SansFight lo define sansFight.js; si ese script no está cargado
+// todavía, tocar el hitbox simplemente no hace nada (no rompe el juego).
+let peleas=[];
+function initPeleas(){
+  peleas=[];
+  for (const l of mapData.layers){ if(l.type!=="objectgroup") continue;
+    for (const o of (l.objects||[])) if(o.name && /^PEL\d+$/i.test(o.name.trim()))
+      peleas.push(o); }
+}
+function checkPeleas(p){
+  if(isTransitioning()) return;
+  for (const pl of peleas){
+    if(!rectsOverlap(p,pl)) continue;
+    const nombre = pl.name.trim().toUpperCase();
+    if (nombre==="PEL1" && window.SansFight && !window.SansFight.activa){
+      window.SansFight.iniciar(p);
+    }
+    break;
+  }
+}
+
 // ---------- puertas multi-mapa ----------
 let doors=[], doorsByName={};
 function getDefaultSpawn(){
@@ -558,7 +581,7 @@ async function loadMap(name){
   currentMapName=name;
   if (ESTADO) ESTADO.mapaActual=name;
   tilesetRanges.length=0; for (const k in decodedLayers) delete decodedLayers[k];
-  initMapObjects(); initStoneObjects(); initSpikes(); initSignObjects(); initCaidas();
+  initMapObjects(); initStoneObjects(); initSpikes(); initSignObjects(); initCaidas(); initPeleas();
   buildTilesetRanges(); decodeAllLayers(); computeWorldBounds();
   await loadImages();
   // Imagen de las piedras: reusa la que ya cargó loadImages() más arriba

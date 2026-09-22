@@ -6,6 +6,7 @@
 <head>
     <meta charset="utf-8" />
     <title>Juego - @ViewBag.Nombre</title>
+    <link rel="stylesheet" href="~/css/sansFight.css" />
     <style>
         body { margin:0; overflow:hidden; background:#000; height:100vh; display:flex; align-items:center; justify-content:center; }
         canvas { background:#000; image-rendering:pixelated; width:min(1280px,95vw); height:min(960px,95vh); aspect-ratio:4/3; }
@@ -36,11 +37,45 @@
         </div>
     </div>
 
+    <!-- GUI de la pelea contra Sans (PEL1) -->
+    <div id="sansBattle">
+        <img id="sbSansImg" class="sb-sans" src="/Battle/sans_idle.gif" alt="Sans">
+        <div class="sb-dialogo" id="sbDialogo"></div>
+
+        <canvas id="sbCanvas" width="360" height="200"></canvas>
+
+        <div class="sb-barra-fight" id="sbFightBar">
+            <img src="/Battle/target_bar.png" alt="">
+            <div class="sb-target-linea" id="sbTargetLinea"></div>
+        </div>
+
+        <div class="sb-hint" id="sbHint"></div>
+
+        <div class="sb-hud">
+            <div>
+            SANS
+            <div class="sb-barra-hp"><div class="sb-barra-hp-fill" id="sbSansHpFill"></div></div>
+            </div>
+            <div class="sb-hud-der">
+            VOS
+            <div class="sb-barra-hp"><div class="sb-barra-hp-fill" id="sbJugadorHpFill"></div></div>
+            </div>
+        </div>
+
+        <div class="sb-menu" id="sbMenu">
+            <img src="/Battle/btn_fight.png" id="sbBtnFight" class="sb-boton" alt="FIGHT">
+            <img src="/Battle/btn_mercy.png" id="sbBtnMercy" class="sb-boton" alt="MERCY">
+        </div>
+
+        <button class="sb-reintentar" id="sbReintentar">REINTENTAR</button>
+    </div>
+
     <script> window.MAPA_INICIAL = "H1"; </script>
     <script src="~/js/puzzleConfig.js"></script>
     <script src="~/js/piConfig.js"></script>
     <script src="~/js/mapRender.js"></script>
     <script src="~/js/site.js"></script>
     <script src="~/js/cartelesConfig.js"></script>
+    <script src="~/js/sansFight.js"></script>
 </body>
 </html>

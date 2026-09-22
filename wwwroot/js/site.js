@@ -104,6 +104,7 @@ function actualizarFrame(dt,mov){
 
 // ---------- update / draw ----------
 function update(dt){
+  if (window.SansFight && window.SansFight.activa) return; // pelea activa: el mapa queda congelado
   if (isTransitioning()){ updateDoorTransition(dt); return; }
   if (signAbierta || saveAbierta) return;
   let dx=0,dy=0;
@@ -117,6 +118,7 @@ function update(dt){
   checkDoors(player);
   checkButtons(player);
   checkCaidas(player);
+  checkPeleas(player);
   ESTADO.jugador = { x: player.x, y: player.y };
 }
 function draw(){
