@@ -8,7 +8,7 @@ namespace TP06.Models
     public class DB
     {
         private string _cs =
-            @"Server=localhost\SQLEXPRESS;DataBase=JuegoDB;Integrated Security=True;TrustServerCertificate=True;";
+            @"Server=localhost;DataBase=JuegoDB;Integrated Security=True;TrustServerCertificate=True;";
 
         // ---------- LOGIN / REGISTRO ----------
         public Usuario ValidarLogin(string usuario, string contrasenia)
@@ -30,12 +30,22 @@ namespace TP06.Models
             }
         }
 
-        public void AgregarUsuario(Usuario u)
+        public bool ExisteUsuario(string usuario)
+        {
+            using (var cn = new SqlConnection(_cs))
+            {
+                return cn.QueryFirstOrDefault<int>(
+                    "SELECT COUNT(1) FROM Usuario WHERE NombreUsuario=@u",
+                    new { u = usuario }) > 0;
+            }
+        }
+
+       public void AgregarUsuario(Usuario u)
         {
             using (var cn = new SqlConnection(_cs))
             {
                 cn.Execute("INSERT INTO Usuario (NombreUsuario,Contrasenia,Nombre,Apellido,TipoUsuario) " +
-                           "VALUES (@NombreUsuario,@Contrasenia,@Nombre,@Apellido,@TipoUsuario)", u);
+                        "VALUES (@NombreUsuario,@Contrasenia,@Nombre,@Apellido,@TipoUsuario)", u);
             }
         }
 
