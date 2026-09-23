@@ -1,0 +1,38 @@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Subterra - Menú Principal</title>
+    <link rel="stylesheet" href="~/css/subterra.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="usuario">
+        <span>* Hola, @ViewBag.Nombre</span>
+        <a href="/Home/Logout">[Salir]</a>
+    </div>
+
+    <h1 class="titulo">SUBTERRA</h1>
+    <p class="subtitulo">AVENTURA · PUZZLE · EXPLORACIÓN</p>
+
+    <nav class="opciones" id="menu">
+        <a href="/Home/Tutorial" class="opcion sel">
+            <svg class="alma" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 0h2v1h-2zM12 0h2v1h-2zM1 1h5v1h-5zM10 1h5v1h-5zM0 2h7v2h-7zM9 2h7v2h-7zM0 4h16v6h-16zM2 10h12v2h-12zM4 12h8v2h-8zM6 14h4v2h-4z" /></svg>
+            <span>Tutorial</span>
+        </a>
+        <a href="/Home/Juego" class="opcion">
+            <svg class="alma" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 0h2v1h-2zM12 0h2v1h-2zM1 1h5v1h-5zM10 1h5v1h-5zM0 2h7v2h-7zM9 2h7v2h-7zM0 4h16v6h-16zM2 10h12v2h-12zM4 12h8v2h-8zM6 14h4v2h-4z" /></svg>
+            <span>Jugar</span>
+        </a>
+    </nav>
+
+    <p class="ayuda">[FLECHAS] MOVERSE &nbsp;&nbsp; [Z / ENTER] ELEGIR</p>
+    <div class="ruinas"></div>
+
+    <script src="~/js/menuAlma.js" asp-append-version="true"></script>
+    <script>menuAlma(document.getElementById("menu"), { teclado: true });</script>
+</body>
+</html>

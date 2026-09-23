@@ -1,30 +1,110 @@
 ﻿@{
     Layout = null;
+    var tab = ViewBag.Tab as string ?? "login";
+    var error = ViewBag.Error as string;
+    var exito = ViewBag.Exito as string;
 }
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="utf-8" />
-    <title>Login</title>
-    <style>
-        body { background:#111; color:#eee; font-family:monospace; display:flex; align-items:center; justify-content:center; height:100vh; margin:0; }
-        .caja { background:#222; padding:30px 40px; border:2px solid #555; border-radius:8px; width:280px; }
-        input { width:100%; padding:8px; margin:6px 0; background:#111; color:#eee; border:1px solid #444; border-radius:4px; font-family:monospace; }
-        button { width:100%; padding:10px; margin-top:10px; background:#4a4; color:#fff; border:none; border-radius:4px; font-family:monospace; cursor:pointer; }
-        .error { color:#f66; font-size:12px; }
-        h2 { margin:0 0 12px 0; text-align:center; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Subterra - Bienvenido</title>
+    <link rel="stylesheet" href="~/css/subterra.css" asp-append-version="true" />
 </head>
 <body>
-    <form class="caja" method="post" action="/Home/Login">
-        <h2>INICIAR SESIÓN</h2>
-        <input type="text" name="usuario" placeholder="Usuario" required />
-        <input type="password" name="contrasenia" placeholder="Contraseña" required />
-        <button type="submit">ENTRAR</button>
-        @if (ViewBag.Error != null)
+    <h1 class="titulo">SUBTERRA</h1>
+    <p class="subtitulo">AVENTURA · PUZZLE · EXPLORACIÓN</p>
+
+    <div class="caja">
+        @if (!string.IsNullOrEmpty(error))
         {
-            <p class="error">@ViewBag.Error</p>
+            <p class="mensaje error">@error</p>
         }
-    </form>
+        @if (!string.IsNullOrEmpty(exito))
+        {
+            <p class="mensaje exito">@exito</p>
+        }
+
+        <div class="pestanas" id="pestanas">
+            <button type="button" class="opcion @(tab == "login" ? "sel" : "")" onclick="cambiarTab('login')">
+                <svg class="alma" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 0h2v1h-2zM12 0h2v1h-2zM1 1h5v1h-5zM10 1h5v1h-5zM0 2h7v2h-7zM9 2h7v2h-7zM0 4h16v6h-16zM2 10h12v2h-12zM4 12h8v2h-8zM6 14h4v2h-4z" /></svg><span>Iniciar sesión</span>
+            </button>
+            <button type="button" class="opcion @(tab == "registro" ? "sel" : "")" onclick="cambiarTab('registro')">
+                <svg class="alma" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 0h2v1h-2zM12 0h2v1h-2zM1 1h5v1h-5zM10 1h5v1h-5zM0 2h7v2h-7zM9 2h7v2h-7zM0 4h16v6h-16zM2 10h12v2h-12zM4 12h8v2h-8zM6 14h4v2h-4z" /></svg><span>Registrarse</span>
+            </button>
+        </div>
+
+        <!-- LOGIN -->
+        <div class="panel @(tab == "login" ? "activo" : "")" id="panel-login">
+            <form method="post" action="/Home/Login">
+                <div class="campo">
+                    <label for="l-usuario">Usuario</label>
+                    <input id="l-usuario" type="text" name="usuario" placeholder="tu nombre de usuario" required autocomplete="username" />
+                </div>
+                <div class="campo">
+                    <label for="l-contrasenia">Contraseña</label>
+                    <input id="l-contrasenia" type="password" name="contrasenia" placeholder="••••••••" required autocomplete="current-password" />
+                </div>
+                <button type="submit" class="opcion enviar"><svg class="alma" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 0h2v1h-2zM12 0h2v1h-2zM1 1h5v1h-5zM10 1h5v1h-5zM0 2h7v2h-7zM9 2h7v2h-7zM0 4h16v6h-16zM2 10h12v2h-12zM4 12h8v2h-8zM6 14h4v2h-4z" /></svg><span>Entrar</span></button>
+            </form>
+        </div>
+
+        <!-- REGISTRO -->
+        <div class="panel @(tab == "registro" ? "activo" : "")" id="panel-registro">
+            <form method="post" action="/Home/Registrar">
+                <div class="campo">
+                    <label for="r-usuario">Nombre de usuario</label>
+                    <input id="r-usuario" type="text" name="usuario" placeholder="elegí un nombre único" required autocomplete="username" />
+                </div>
+                <div class="fila">
+                    <div class="campo">
+                        <label for="r-nombre">Nombre</label>
+                        <input id="r-nombre" type="text" name="nombre" placeholder="opcional" />
+                    </div>
+                    <div class="campo">
+                        <label for="r-apellido">Apellido</label>
+                        <input id="r-apellido" type="text" name="apellido" placeholder="opcional" />
+                    </div>
+                </div>
+                <div class="campo">
+                    <label for="r-contrasenia">Contraseña</label>
+                    <input id="r-contrasenia" type="password" name="contrasenia" placeholder="mínimo 4 caracteres" required minlength="4" autocomplete="new-password" />
+                </div>
+                <div class="campo">
+                    <label for="r-repetir">Repetir contraseña</label>
+                    <input id="r-repetir" type="password" name="repetirContrasenia" placeholder="repetí tu contraseña" required minlength="4" autocomplete="new-password" />
+                </div>
+                <button type="submit" class="opcion enviar"><svg class="alma" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 0h2v1h-2zM12 0h2v1h-2zM1 1h5v1h-5zM10 1h5v1h-5zM0 2h7v2h-7zM9 2h7v2h-7zM0 4h16v6h-16zM2 10h12v2h-12zM4 12h8v2h-8zM6 14h4v2h-4z" /></svg><span>Crear cuenta</span></button>
+            </form>
+        </div>
+    </div>
+
+    <p class="pie">© @DateTime.Now.Year - SUBTERRA</p>
+    <div class="ruinas"></div>
+
+    <script>
+        // el alma marca la pestaña abierta; al cambiar suena el "select" de la pelea
+        function cambiarTab(tab) {
+            try { const a = new Audio("/Battle/SansFight/snd/MenuSelect.ogg"); a.volume = 0.5; a.play().catch(() => { }); } catch (e) { }
+            const botones = document.querySelectorAll("#pestanas .opcion");
+            botones.forEach(b => b.classList.remove("sel"));
+            document.querySelectorAll(".panel").forEach(p => p.classList.remove("activo"));
+            const i = tab === "login" ? 0 : 1;
+            botones[i].classList.add("sel");
+            const panel = document.getElementById(tab === "login" ? "panel-login" : "panel-registro");
+            panel.classList.add("activo");
+            const primero = panel.querySelector("input");
+            if (primero) primero.focus();
+
+            const url = new URL(window.location);
+            url.searchParams.set("tab", tab);
+            history.replaceState(null, "", url);
+        }
+
+        // foco en el primer campo de la pestaña abierta
+        const abierto = document.querySelector(".panel.activo input");
+        if (abierto) abierto.focus();
+    </script>
 </body>
 </html>

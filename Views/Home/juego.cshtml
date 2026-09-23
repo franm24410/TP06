@@ -6,6 +6,8 @@
 <head>
     <meta charset="utf-8" />
     <title>Juego - @ViewBag.Nombre</title>
+    <link rel="stylesheet" href="~/css/sansFight.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/mundo.css" asp-append-version="true" />
     <style>
         body { margin:0; overflow:hidden; background:#000; height:100vh; display:flex; align-items:center; justify-content:center; }
         canvas { background:#000; image-rendering:pixelated; width:min(1280px,95vw); height:min(960px,95vh); aspect-ratio:4/3; }
@@ -36,11 +38,32 @@
         </div>
     </div>
 
-    <script> window.MAPA_INICIAL = "H1"; </script>
-    <script src="~/js/puzzleConfig.js"></script>
-    <script src="~/js/piConfig.js"></script>
-    <script src="~/js/mapRender.js"></script>
-    <script src="~/js/site.js"></script>
-    <script src="~/js/cartelesConfig.js"></script>
+    <!-- GUI de la pelea contra Sans (PEL1) — ver wwwroot/js/sansFight.js -->
+    <div id="sansBattle">
+        <canvas id="sbCanvas" width="640" height="480"></canvas>
+        <div class="sb-controles">FLECHAS / WASD: mover &nbsp;·&nbsp; Z / ENTER: confirmar &nbsp;·&nbsp; X / SHIFT: volver</div>
+    </div>
+
+    <!-- Pelea contra monstruos comunes (encuentros aleatorios) — ver wwwroot/js/enemyFight.js -->
+    <div id="enemyBattle">
+        <canvas id="ebCanvas" width="640" height="480"></canvas>
+        <div class="sb-controles">FLECHAS / WASD: mover &nbsp;·&nbsp; Z / ENTER: confirmar &nbsp;·&nbsp; X / SHIFT: volver</div>
+    </div>
+
+    <script>
+        window.MAPA_INICIAL = "H1";
+        window.NOMBRE_JUGADOR = @Json.Serialize((string)ViewBag.Nombre ?? "");
+    </script>
+    <script src="~/js/puzzleConfig.js" asp-append-version="true"></script>
+    <script src="~/js/piConfig.js" asp-append-version="true"></script>
+    <script src="~/js/mapRender.js" asp-append-version="true"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/cartelesConfig.js" asp-append-version="true"></script>
+    <script src="~/js/jugador.js" asp-append-version="true"></script>
+    <script src="~/js/mundoConfig.js" asp-append-version="true"></script>
+    <script src="~/js/mundo.js" asp-append-version="true"></script>
+    <script src="~/js/sansAttacks.js" asp-append-version="true"></script>
+    <script src="~/js/sansFight.js" asp-append-version="true"></script>
+    <script src="~/js/enemyFight.js" asp-append-version="true"></script>
 </body>
 </html>
