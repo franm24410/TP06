@@ -77,7 +77,7 @@
   }
 
   // =====================================================================
-  // Botones INT1-3 (desactivan los PIN4, ver piConfig.js)
+  // Botones INT1-3 (desactivan los PIN5, ver piConfig.js)
   // =====================================================================
   function estadoINT() { if (!ESTADO.botonesINT) ESTADO.botonesINT = {}; return ESTADO.botonesINT; }
   function botonesINTCompletos() { const e = (typeof ESTADO !== "undefined" && ESTADO.botonesINT) || {}; return INTS.every(n => e[n]); }

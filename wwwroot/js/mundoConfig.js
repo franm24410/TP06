@@ -28,6 +28,6 @@ const TIENDAS = {
 const CAIDA_DESTINO = "29";
 
 // ---------- Botones INT ----------
-// Hay que tocar INT1, INT2 e INT3 para que se bajen los pinchos PIN4
+// Hay que tocar INT1, INT2 e INT3 para que se bajen los pinchos PIN5
 // (la lista de pinchos está en piConfig.js: SPIKE_POR_BOTONES_INT).
 const BOTONES_INT = ["INT1", "INT2", "INT3"];
