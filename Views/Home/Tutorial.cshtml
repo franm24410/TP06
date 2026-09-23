@@ -7,32 +7,12 @@
     <meta charset="utf-8" />
     <title>Tutorial - Subterra</title>
     <link rel="stylesheet" href="~/css/sansFight.css" />
+    <link rel="stylesheet" href="~/css/mundo.css" asp-append-version="true" />
     <style>
+        @@font-face { font-family: '8bitoperator'; src: url('/fonts/8bitOperatorPlus-Regular.ttf') format('truetype'); }
         body { margin:0; overflow:hidden; background:#000; height:100vh; display:flex; align-items:center; justify-content:center; }
         canvas { background:#000; image-rendering:pixelated; width:min(1280px,95vw); height:min(960px,95vh); aspect-ratio:4/3; }
         
-        .btn-volver {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            padding: 12px 24px;
-            background: linear-gradient(135deg, #00d4ff, #7b2ff7);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 14px;
-            font-weight: 700;
-            letter-spacing: 2px;
-            cursor: pointer;
-            z-index: 100;
-            transition: all 0.3s ease;
-        }
-
-        .btn-volver:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.4);
-        }
 
         .tutorial-info {
             position: fixed;
@@ -43,7 +23,8 @@
             padding: 12px 24px;
             border-radius: 8px;
             color: #a0a0b8;
-            font-size: 13px;
+            font-family: '8bitoperator', monospace;
+            font-size: 16px;
             z-index: 100;
         }
 
@@ -57,7 +38,6 @@
     </style>
 </head>
 <body>
-    <button class="btn-volver" onclick="volverAlMenu()">← VOLVER AL MENÚ</button>
     <canvas id="game" width="640" height="480"></canvas>
     <div class="tutorial-info">Tutorial - Presiona E para interactuar</div>
 
@@ -77,49 +57,26 @@
     <script>
         window.MAPA_INICIAL = "H21";
         window.MODO_TUTORIAL = true;
+        window.TUTORIAL_MAPA = "H21";      // mapa del tutorial (Tiles/H21.tmj)
+        window.TUTORIAL_SPAWN = "spawnT";  // hitbox donde aparecés
+        window.TUTORIAL_SALIDA = "ph39";   // hitbox que te devuelve al menú
+        window.NOMBRE_JUGADOR = @Json.Serialize((string)ViewBag.Nombre ?? "");
     </script>
 
-    <script src="~/js/puzzleConfig.js"></script>
-    <script src="~/js/piConfig.js"></script>
-    <script src="~/js/mapRender.js"></script>
-    <script src="~/js/site.js"></script>
-    <script src="~/js/cartelesConfig.js"></script>
+    <script src="~/js/puzzleConfig.js" asp-append-version="true"></script>
+    <script src="~/js/piConfig.js" asp-append-version="true"></script>
+    <script src="~/js/mapRender.js" asp-append-version="true"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/cartelesConfig.js" asp-append-version="true"></script>
+    <script src="~/js/jugador.js" asp-append-version="true"></script>
+    <script src="~/js/mundoConfig.js" asp-append-version="true"></script>
+    <script src="~/js/mundo.js" asp-append-version="true"></script>
 
     <!-- Script del tutorial: solo lógica específica, sin redeclarar variables -->
     <script>
-        function volverAlMenu() {
-            if (confirm('¿Querés volver al menú principal?')) {
-                window.location.href = '/Home/Menu';
-            }
-        }
 
-        // Sobrescribir checkDoors para detectar ph39
-        const _originalCheckDoors = window.checkDoors;
-        window.checkDoors = function(p) {
-            if (_originalCheckDoors) _originalCheckDoors(p);
-            
-            if (window.habitacionActual && window.habitacionActual.Interactivos) {
-                const ph39 = window.habitacionActual.Interactivos.find(i => i.Nombre === 'ph39');
-                if (ph39) {
-                    const dist = Math.hypot(p.x - ph39.X, p.y - ph39.Y);
-                    if (dist < 30) {
-                        setTimeout(() => {
-                            if (confirm('¿Querés salir del tutorial y volver al menú?')) {
-                                window.location.href = '/Home/Menu';
-                            }
-                        }, 500);
-                    }
-                }
-            }
-        };
-
-        // Deshabilitar guardado en tutorial
-        if (btnGuardar) {
-            btnGuardar.addEventListener('click', () => {
-                saveMsg.textContent = "✔ El tutorial no se guarda";
-                setTimeout(cerrarSave, 700);
-            });
-        }
+        // La vuelta al menú al tocar "ph39" y el arranque en "spawnT" están en site.js
+        // (se activan con window.MODO_TUTORIAL). El guardado queda desactivado ahí también.
     </script>
 </body>
 </html>

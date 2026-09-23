@@ -1,0 +1,42 @@
+/* mundo.css — mochila y tienda en el mapa (cajas estilo Undertale) */
+@font-face { font-family: "8bitoperator"; src: url("/fonts/8bitOperatorPlus-Regular.ttf") format("truetype"); }
+
+.mundo-gui {
+  position: fixed; inset: 0; z-index: 400;
+  display: none;
+  flex-direction: column; align-items: center; justify-content: flex-end;
+  padding: 0 16px 6vh;
+  background: rgba(0, 0, 0, .35);
+  font-family: "8bitoperator", monospace;
+  color: #fff;
+  font-size: 24px;
+  line-height: 1.35;
+  -webkit-font-smoothing: none;
+}
+.mundo-gui.abierta { display: flex; }
+
+.mg-caja {
+  background: #000;
+  border: 5px solid #fff;
+  padding: 16px 22px;
+}
+.mg-fila { display: flex; gap: 14px; align-items: flex-start; width: min(760px, 100%); margin-bottom: auto; margin-top: 8vh; }
+.mg-stats { flex: none; width: 190px; }
+.mg-nombre { margin-bottom: 6px; }
+.mg-items { flex: 1; min-height: 190px; }
+.mg-titulo { color: #8a8a8a; font-size: 18px; letter-spacing: .15em; margin-bottom: 8px; }
+.mg-vacio { color: #8a8a8a; }
+.mg-dialogo { width: min(760px, 100%); min-height: 150px; }
+.mg-sub { color: #8a8a8a; font-size: 18px; margin: 6px 0 12px; }
+.mg-sino { display: flex; gap: 60px; margin-left: 30px; }
+
+.mg-op { display: flex; align-items: center; gap: 12px; }
+.mg-op.sel { color: #ffff00; }
+.mg-alma { width: 20px; height: 20px; fill: #ff0000; shape-rendering: crispEdges; visibility: hidden; flex: none; }
+.mg-op.sel .mg-alma { visibility: visible; }
+.mg-ayuda { color: #8a8a8a; font-size: 16px; margin-top: 10px; }
+
+@media (max-width: 600px) {
+  .mg-fila { flex-direction: column; }
+  .mg-stats { width: 100%; }
+}

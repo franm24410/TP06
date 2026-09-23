@@ -117,15 +117,24 @@ function getLayerTiles(layer){
 }
 const TILE_LAYER_NAMES = ["background","Piso","Paredes","Detalles-Piso","Detalles-Pared","Objeto"];
 const decodedLayers = {};
+// Capas de tiles que se dibujan en el mapa actual. Normalmente son las de
+// TILE_LAYER_NAMES; si el mapa no tiene ninguna de esas (ej. H21, con
+// "Capa de patrones 1" y "Carteles"), se dibujan todas sus capas de tiles
+// visibles, en el mismo orden que en Tiled.
+let capasTiles = TILE_LAYER_NAMES;
 function decodeAllLayers(){
-  for (const n of TILE_LAYER_NAMES){
+  const tl = mapData.layers.filter(x=>x.type==="tilelayer");
+  capasTiles = tl.some(x=>TILE_LAYER_NAMES.includes(x.name))
+    ? TILE_LAYER_NAMES
+    : tl.filter(x=>x.visible!==false).map(x=>x.name);
+  for (const n of capasTiles){
     const l = mapData.layers.find(x=>x.name===n);
     if (l) decodedLayers[n] = getLayerTiles(l);
   }
 }
 function computeWorldBounds(){
   let a=Infinity,b=Infinity,c=-Infinity,d=-Infinity;
-  for (const n of TILE_LAYER_NAMES){
+  for (const n of capasTiles){
     const t = decodedLayers[n]; if(!t) continue;
     for (const q of t){
       if(q.tileX<a)a=q.tileX; if(q.tileY<b)b=q.tileY;
@@ -163,6 +172,9 @@ let wallObjects = [];
 let spikes = [];
 function spikeOwner(num){ return (typeof SPIKE_PUZZLE!=="undefined" && SPIKE_PUZZLE[num]) || num; }
 function spikeDesactivado(sp){
+  // Pinchos que se bajan con los botones INT1-3 (ver piConfig.js y mundo.js)
+  if (typeof SPIKE_POR_BOTONES_INT!=="undefined" && SPIKE_POR_BOTONES_INT.includes(sp.num))
+    return !!(window.Mundo && Mundo.botonesINTCompletos());
   const owner = spikeOwner(sp.num);
   const piedra = !!(ESTADO && ESTADO.puzzlesPiedra && ESTADO.puzzlesPiedra[owner]);
   if (!piedra) return false;
@@ -565,7 +577,7 @@ function drawScene(ctx,cv,p,cam){
   if (h<=cv.height) cam.y=worldBounds.minY+(h-cv.height)/2;
   else cam.y=Math.max(worldBounds.minY, Math.min(p.y-cv.height/2, worldBounds.maxY-cv.height));
   cam.x=Math.round(cam.x); cam.y=Math.round(cam.y);
-  for (const n of TILE_LAYER_NAMES){ const t=decodedLayers[n]; if(!t) continue;
+  for (const n of capasTiles){ const t=decodedLayers[n]; if(!t) continue;
     for (const q of t) drawTile(ctx,q.gid,q.tileX,q.tileY,cam); }
 }
 
@@ -595,6 +607,7 @@ function initMapObjects(){
     if(!o.name) return true;
     if(/^(PI|PL|RB|PUZ|PIN)\d+$/i.test(o.name)) return false;
     if(/^cai$/i.test(o.name.trim())) return false;
+    if(/^caida$/i.test(o.name.trim())) return false;   // pozos del hielo: se pisan (ver mundo.js)
     return true;
   }) : [];
   const dl=mapData.layers.find(l=>l.name==="Doors");

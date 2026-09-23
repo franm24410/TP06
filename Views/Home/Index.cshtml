@@ -9,429 +9,102 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bienvenido | TP06</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        :root {
-            --bg-1: #0a0e27;
-            --bg-2: #1a1a2e;
-            --primary: #00d4ff;
-            --secondary: #7b2ff7;
-            --accent: #ff2e63;
-            --success: #00ff88;
-            --danger: #ff3860;
-            --text: #e8e8e8;
-            --text-dim: #a0a0b8;
-            --card-bg: rgba(22, 26, 48, 0.75);
-            --border: rgba(255, 255, 255, 0.08);
-        }
-
-        body {
-            min-height: 100vh;
-            font-family: 'Inter', sans-serif;
-            color: var(--text);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 50%, #16213e 100%);
-            position: relative;
-            overflow: hidden;
-            padding: 20px;
-        }
-
-        body::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background:
-                radial-gradient(circle at 20% 30%, rgba(0, 212, 255, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 70%, rgba(123, 47, 247, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 50% 100%, rgba(255, 46, 99, 0.1) 0%, transparent 50%);
-            animation: bgPulse 8s ease-in-out infinite;
-            z-index: 0;
-        }
-
-        body::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background-image:
-                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-            background-size: 50px 50px;
-            z-index: 0;
-        }
-
-        @@keyframes bgPulse {
-            0%, 100% { opacity: 0.8; }
-            50% { opacity: 1; }
-        }
-
-        .contenedor {
-            position: relative;
-            z-index: 1;
-            width: 100%;
-            max-width: 440px;
-        }
-
-        .logo {
-            text-align: center;
-            margin-bottom: 24px;
-        }
-
-        .logo h1 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 36px;
-            font-weight: 900;
-            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: 4px;
-            filter: drop-shadow(0 0 20px rgba(0, 212, 255, 0.4));
-        }
-
-        .logo p {
-            color: var(--text-dim);
-            font-size: 13px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            margin-top: 6px;
-        }
-
-        .card {
-            background: var(--card-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 32px;
-            box-shadow:
-                0 20px 60px rgba(0, 0, 0, 0.5),
-                0 0 0 1px rgba(255, 255, 255, 0.02) inset;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--primary), transparent);
-            animation: shine 4s linear infinite;
-        }
-
-        @@keyframes shine {
-            0% { left: -100%; }
-            100% { left: 100%; }
-        }
-
-        .tabs {
-            display: flex;
-            gap: 4px;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 4px;
-            border-radius: 12px;
-            margin-bottom: 28px;
-            position: relative;
-        }
-
-        .tab-btn {
-            flex: 1;
-            padding: 12px;
-            background: transparent;
-            color: var(--text-dim);
-            border: none;
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 14px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            z-index: 1;
-        }
-
-        .tab-btn.active {
-            color: white;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
-        }
-
-        .tab-btn:hover:not(.active) {
-            color: var(--text);
-        }
-
-        .form-panel {
-            display: none;
-            animation: fadeIn 0.4s ease;
-        }
-
-        .form-panel.active {
-            display: block;
-        }
-
-        @@keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .campo {
-            margin-bottom: 18px;
-        }
-
-        .campo label {
-            display: block;
-            font-size: 12px;
-            color: var(--text-dim);
-            margin-bottom: 6px;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-        }
-
-        .campo input {
-            width: 100%;
-            padding: 13px 16px;
-            background: rgba(0, 0, 0, 0.3);
-            color: var(--text);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            outline: none;
-        }
-
-        .campo input:focus {
-            border-color: var(--primary);
-            background: rgba(0, 212, 255, 0.05);
-            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
-        }
-
-        .campo input::placeholder {
-            color: #555570;
-        }
-
-        .fila {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        .btn-submit {
-            width: 100%;
-            padding: 14px;
-            margin-top: 8px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-family: inherit;
-            font-size: 14px;
-            font-weight: 700;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn-submit::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, var(--secondary), var(--accent));
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .btn-submit span {
-            position: relative;
-            z-index: 1;
-        }
-
-        .btn-submit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 212, 255, 0.4);
-        }
-
-        .btn-submit:hover::before {
-            opacity: 1;
-        }
-
-        .btn-submit:active {
-            transform: translateY(0);
-        }
-
-        .alert {
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 18px;
-            font-size: 13px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            animation: slideIn 0.4s ease;
-        }
-
-        @@keyframes slideIn {
-            from { opacity: 0; transform: translateX(-10px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        .alert-error {
-            background: rgba(255, 56, 96, 0.12);
-            border: 1px solid rgba(255, 56, 96, 0.3);
-            color: #ff6b8c;
-        }
-
-        .alert-success {
-            background: rgba(0, 255, 136, 0.12);
-            border: 1px solid rgba(0, 255, 136, 0.3);
-            color: #4aff9d;
-        }
-
-        .alert-icon {
-            flex-shrink: 0;
-            width: 18px;
-            height: 18px;
-        }
-
-        .footer-text {
-            text-align: center;
-            margin-top: 22px;
-            color: var(--text-dim);
-            font-size: 12px;
-            letter-spacing: 1px;
-        }
-
-        @@media (max-width: 480px) {
-            .card { padding: 24px 20px; }
-            .logo h1 { font-size: 28px; }
-            .fila { grid-template-columns: 1fr; }
-        }
-    </style>
+    <title>Subterra - Bienvenido</title>
+    <link rel="stylesheet" href="~/css/subterra.css" asp-append-version="true" />
 </head>
 <body>
-    <div class="contenedor">
-        <div class="logo">
-            <h1>TP06</h1>
-            <p>Aventura · Puzzle · Exploración</p>
+    <h1 class="titulo">SUBTERRA</h1>
+    <p class="subtitulo">AVENTURA · PUZZLE · EXPLORACIÓN</p>
+
+    <div class="caja">
+        @if (!string.IsNullOrEmpty(error))
+        {
+            <p class="mensaje error">@error</p>
+        }
+        @if (!string.IsNullOrEmpty(exito))
+        {
+            <p class="mensaje exito">@exito</p>
+        }
+
+        <div class="pestanas" id="pestanas">
+            <button type="button" class="opcion @(tab == "login" ? "sel" : "")" onclick="cambiarTab('login')">
+                <svg class="alma" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 0h2v1h-2zM12 0h2v1h-2zM1 1h5v1h-5zM10 1h5v1h-5zM0 2h7v2h-7zM9 2h7v2h-7zM0 4h16v6h-16zM2 10h12v2h-12zM4 12h8v2h-8zM6 14h4v2h-4z" /></svg><span>Iniciar sesión</span>
+            </button>
+            <button type="button" class="opcion @(tab == "registro" ? "sel" : "")" onclick="cambiarTab('registro')">
+                <svg class="alma" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 0h2v1h-2zM12 0h2v1h-2zM1 1h5v1h-5zM10 1h5v1h-5zM0 2h7v2h-7zM9 2h7v2h-7zM0 4h16v6h-16zM2 10h12v2h-12zM4 12h8v2h-8zM6 14h4v2h-4z" /></svg><span>Registrarse</span>
+            </button>
         </div>
 
-        <div class="card">
-            @if (!string.IsNullOrEmpty(error))
-            {
-                <div class="alert alert-error">
-                    <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"/>
-                        <line x1="12" y1="8" x2="12" y2="12"/>
-                        <line x1="12" y1="16" x2="12.01" y2="16"/>
-                    </svg>
-                    <span>@error</span>
+        <!-- LOGIN -->
+        <div class="panel @(tab == "login" ? "activo" : "")" id="panel-login">
+            <form method="post" action="/Home/Login">
+                <div class="campo">
+                    <label for="l-usuario">Usuario</label>
+                    <input id="l-usuario" type="text" name="usuario" placeholder="tu nombre de usuario" required autocomplete="username" />
                 </div>
-            }
-
-            @if (!string.IsNullOrEmpty(exito))
-            {
-                <div class="alert alert-success">
-                    <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                        <polyline points="22 4 12 14.01 9 11.01"/>
-                    </svg>
-                    <span>@exito</span>
+                <div class="campo">
+                    <label for="l-contrasenia">Contraseña</label>
+                    <input id="l-contrasenia" type="password" name="contrasenia" placeholder="••••••••" required autocomplete="current-password" />
                 </div>
-            }
+                <button type="submit" class="opcion enviar"><svg class="alma" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 0h2v1h-2zM12 0h2v1h-2zM1 1h5v1h-5zM10 1h5v1h-5zM0 2h7v2h-7zM9 2h7v2h-7zM0 4h16v6h-16zM2 10h12v2h-12zM4 12h8v2h-8zM6 14h4v2h-4z" /></svg><span>Entrar</span></button>
+            </form>
+        </div>
 
-            <div class="tabs">
-                <button class="tab-btn @(tab == "login" ? "active" : "")" type="button" onclick="cambiarTab('login')">
-                    Iniciar Sesión
-                </button>
-                <button class="tab-btn @(tab == "registro" ? "active" : "")" type="button" onclick="cambiarTab('registro')">
-                    Registrarse
-                </button>
-            </div>
-
-            <!-- LOGIN -->
-            <div class="form-panel @(tab == "login" ? "active" : "")" id="panel-login">
-                <form method="post" action="/Home/Login">
+        <!-- REGISTRO -->
+        <div class="panel @(tab == "registro" ? "activo" : "")" id="panel-registro">
+            <form method="post" action="/Home/Registrar">
+                <div class="campo">
+                    <label for="r-usuario">Nombre de usuario</label>
+                    <input id="r-usuario" type="text" name="usuario" placeholder="elegí un nombre único" required autocomplete="username" />
+                </div>
+                <div class="fila">
                     <div class="campo">
-                        <label>Usuario</label>
-                        <input type="text" name="usuario" placeholder="Tu nombre de usuario" required autofocus />
+                        <label for="r-nombre">Nombre</label>
+                        <input id="r-nombre" type="text" name="nombre" placeholder="opcional" />
                     </div>
                     <div class="campo">
-                        <label>Contraseña</label>
-                        <input type="password" name="contrasenia" placeholder="••••••••" required />
+                        <label for="r-apellido">Apellido</label>
+                        <input id="r-apellido" type="text" name="apellido" placeholder="opcional" />
                     </div>
-                    <button type="submit" class="btn-submit">
-                        <span>Entrar al juego</span>
-                    </button>
-                </form>
-            </div>
-
-            <!-- REGISTRO -->
-            <div class="form-panel @(tab == "registro" ? "active" : "")" id="panel-registro">
-                <form method="post" action="/Home/Registrar">
-                    <div class="campo">
-                        <label>Nombre de usuario</label>
-                        <input type="text" name="usuario" placeholder="Elegí un nombre único" required />
-                    </div>
-                    <div class="fila">
-                        <div class="campo">
-                            <label>Nombre</label>
-                            <input type="text" name="nombre" placeholder="Opcional" />
-                        </div>
-                        <div class="campo">
-                            <label>Apellido</label>
-                            <input type="text" name="apellido" placeholder="Opcional" />
-                        </div>
-                    </div>
-                    <div class="campo">
-                        <label>Contraseña</label>
-                        <input type="password" name="contrasenia" placeholder="Mínimo 4 caracteres" required minlength="4" />
-                    </div>
-                    <div class="campo">
-                        <label>Repetir contraseña</label>
-                        <input type="password" name="repetirContrasenia" placeholder="Repetí tu contraseña" required minlength="4" />
-                    </div>
-                    <button type="submit" class="btn-submit">
-                        <span>Crear cuenta</span>
-                    </button>
-                </form>
-            </div>
-
-            <p class="footer-text">© @DateTime.Now.Year - TP06</p>
+                </div>
+                <div class="campo">
+                    <label for="r-contrasenia">Contraseña</label>
+                    <input id="r-contrasenia" type="password" name="contrasenia" placeholder="mínimo 4 caracteres" required minlength="4" autocomplete="new-password" />
+                </div>
+                <div class="campo">
+                    <label for="r-repetir">Repetir contraseña</label>
+                    <input id="r-repetir" type="password" name="repetirContrasenia" placeholder="repetí tu contraseña" required minlength="4" autocomplete="new-password" />
+                </div>
+                <button type="submit" class="opcion enviar"><svg class="alma" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 0h2v1h-2zM12 0h2v1h-2zM1 1h5v1h-5zM10 1h5v1h-5zM0 2h7v2h-7zM9 2h7v2h-7zM0 4h16v6h-16zM2 10h12v2h-12zM4 12h8v2h-8zM6 14h4v2h-4z" /></svg><span>Crear cuenta</span></button>
+            </form>
         </div>
     </div>
 
-    <script>
-        function cambiarTab(tab) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.form-panel').forEach(p => p.classList.remove('active'));
+    <p class="pie">© @DateTime.Now.Year - SUBTERRA</p>
+    <div class="ruinas"></div>
 
-            if (tab === 'login') {
-                document.querySelectorAll('.tab-btn')[0].classList.add('active');
-                document.getElementById('panel-login').classList.add('active');
-            } else {
-                document.querySelectorAll('.tab-btn')[1].classList.add('active');
-                document.getElementById('panel-registro').classList.add('active');
-            }
+    <script>
+        // el alma marca la pestaña abierta; al cambiar suena el "select" de la pelea
+        function cambiarTab(tab) {
+            try { const a = new Audio("/Battle/SansFight/snd/MenuSelect.ogg"); a.volume = 0.5; a.play().catch(() => { }); } catch (e) { }
+            const botones = document.querySelectorAll("#pestanas .opcion");
+            botones.forEach(b => b.classList.remove("sel"));
+            document.querySelectorAll(".panel").forEach(p => p.classList.remove("activo"));
+            const i = tab === "login" ? 0 : 1;
+            botones[i].classList.add("sel");
+            const panel = document.getElementById(tab === "login" ? "panel-login" : "panel-registro");
+            panel.classList.add("activo");
+            const primero = panel.querySelector("input");
+            if (primero) primero.focus();
 
             const url = new URL(window.location);
-            url.searchParams.set('tab', tab);
-            history.replaceState(null, '', url);
+            url.searchParams.set("tab", tab);
+            history.replaceState(null, "", url);
         }
+
+        // foco en el primer campo de la pestaña abierta
+        const abierto = document.querySelector(".panel.activo input");
+        if (abierto) abierto.focus();
     </script>
 </body>
 </html>

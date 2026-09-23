@@ -31,6 +31,11 @@ function cerrarSave(){ saveGui.classList.remove("abierto"); saveAbierta=false; }
 function frenar(){ for (const k in keys) keys[k]=false; grupoActivo=null; }
 
 btnGuardar.addEventListener("click", () => {
+  if (window.MODO_TUTORIAL){                     // el tutorial no pisa la partida guardada
+    saveMsg.textContent = "✔ El tutorial no se guarda";
+    setTimeout(cerrarSave, 700);
+    return;
+  }
   snapshotPiedras();
   ESTADO.jugador = { x: player.x, y: player.y };
   ESTADO.ultimoGuardado = { mapa: currentMapName, x: player.x, y: player.y };
@@ -106,19 +111,27 @@ function actualizarFrame(dt,mov){
 // ---------- update / draw ----------
 function update(dt){
   if (window.SansFight && window.SansFight.activa) return; // pelea activa: el mapa queda congelado
+  if (window.EnemyFight && window.EnemyFight.activa) return;
   if (isTransitioning()){ updateDoorTransition(dt); return; }
   if (signAbierta || saveAbierta) return;
+  if (window.Mundo && Mundo.guiAbierta) return;            // mochila / tienda abiertas
   let dx=0,dy=0;
   if(keys.w||keys.arrowup)dy-=speed; if(keys.s||keys.arrowdown)dy+=speed;
   if(keys.a||keys.arrowleft)dx-=speed; if(keys.d||keys.arrowright)dx+=speed;
-  moveWithWallCollision(player,dx,dy);
+  const antesX=player.x, antesY=player.y, frameAntes=frameActual;
+  if (window.Mundo) Mundo.moverJugador(player,dx,dy,speed); // (maneja el hielo)
+  else moveWithWallCollision(player,dx,dy);
   updatePiedras(player);
   checkResetButtons(player);
   const mov=actualizarDireccion();
   actualizarFrame(dt,mov);
+  // cada cuadro de la animación de caminar cuenta como un paso (para los encuentros)
+  if (window.Mundo && mov && frameActual!==frameAntes && (player.x!==antesX || player.y!==antesY)) Mundo.paso();
+  if (window.MODO_TUTORIAL && checkSalidaTutorial(player)) return;
   checkDoors(player);
   checkButtons(player);
   checkCaidas(player);
+  if (window.Mundo){ if (Mundo.checkCaida(player)) return; Mundo.checkBotonesINT(player); }
   checkPeleas(player);
   ESTADO.jugador = { x: player.x, y: player.y };
 }
@@ -136,6 +149,40 @@ function draw(){
 }
 let ultimo=0;
 function loop(ts){ const dt=ts-ultimo; ultimo=ts; update(dt||16); draw(); requestAnimationFrame(loop); }
+
+// ---------- tutorial ----------
+// Tutorial.cshtml pone MODO_TUTORIAL = true: arranca siempre en H21 sobre "spawnT"
+// (sin cargar la partida guardada) y al tocar "ph39" vuelve al menú.
+const TUTORIAL_MAPA   = window.TUTORIAL_MAPA   || "H21";
+const TUTORIAL_SPAWN  = window.TUTORIAL_SPAWN  || "spawnT";
+const TUTORIAL_SALIDA = window.TUTORIAL_SALIDA || "ph39";
+let saliendoTutorial = false;
+function checkSalidaTutorial(p){
+  if (saliendoTutorial) return true;
+  const salida = findObjectByName(TUTORIAL_SALIDA);
+  if (!salida || !rectsOverlap(p, salida)) return false;
+  saliendoTutorial = true;
+  frenar();
+  // mismo fundido a negro que las puertas y después al menú (Tutorial / Jugar)
+  startDoorTransition(p, { targetMap: currentMapName, x: p.x, y: p.y, duracion: 400 });
+  setTimeout(() => { window.location.href = "/Home/Menu"; }, 400);
+  return true;
+}
+function spawnTutorial(){
+  const s = findObjectByName(TUTORIAL_SPAWN);
+  if (s) return { x: s.x + (s.width||0)/2, y: s.y + (s.height||0)/2 };
+  console.warn("Falta el objeto '"+TUTORIAL_SPAWN+"' en "+TUTORIAL_MAPA+"; uso el spawn por defecto.");
+  return getDefaultSpawn();
+}
+if (window.MODO_TUTORIAL){
+  initMapRender(ESTADO, TUTORIAL_MAPA).then(()=>{
+    const spawn = spawnTutorial();
+    player.x = Math.round(spawn.x - player.width/2);
+    player.y = Math.round(spawn.y - player.height/2);
+    ESTADO.jugador = { x: player.x, y: player.y };
+    requestAnimationFrame(loop);
+  }).catch(err=>console.error(err));
+} else
 
 // ---------- arranque: cargar estado de BD y luego init ----------
 fetch("/Partida/Cargar")

@@ -7,213 +7,32 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Subterra - Menú Principal</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        :root {
-            --bg-1: #0a0e27;
-            --bg-2: #1a1a2e;
-            --primary: #00d4ff;
-            --secondary: #7b2ff7;
-            --accent: #ff2e63;
-            --text: #e8e8e8;
-            --text-dim: #a0a0b8;
-        }
-
-        body {
-            min-height: 100vh;
-            font-family: 'Inter', sans-serif;
-            color: var(--text);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 50%, #16213e 100%);
-            position: relative;
-            overflow: hidden;
-        }
-
-        body::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background:
-                radial-gradient(circle at 20% 30%, rgba(0, 212, 255, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 70%, rgba(123, 47, 247, 0.15) 0%, transparent 50%);
-            animation: bgPulse 8s ease-in-out infinite;
-        }
-
-        @@keyframes bgPulse {
-            0%, 100% { opacity: 0.8; }
-            50% { opacity: 1; }
-        }
-
-        .container {
-            position: relative;
-            z-index: 1;
-            text-align: center;
-            padding: 40px 20px;
-        }
-
-        .title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 72px;
-            font-weight: 900;
-            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: 8px;
-            margin-bottom: 8px;
-            filter: drop-shadow(0 0 30px rgba(0, 212, 255, 0.5));
-            animation: titleGlow 3s ease-in-out infinite;
-        }
-
-        @@keyframes titleGlow {
-            0%, 100% { filter: drop-shadow(0 0 30px rgba(0, 212, 255, 0.5)); }
-            50% { filter: drop-shadow(0 0 50px rgba(123, 47, 247, 0.8)); }
-        }
-
-        .subtitle {
-            color: var(--text-dim);
-            font-size: 14px;
-            letter-spacing: 4px;
-            text-transform: uppercase;
-            margin-bottom: 60px;
-        }
-
-        .menu-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            align-items: center;
-        }
-
-        .menu-btn {
-            width: 280px;
-            padding: 18px 32px;
-            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(123, 47, 247, 0.1));
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            color: var(--text);
-            font-family: 'Orbitron', sans-serif;
-            font-size: 18px;
-            font-weight: 700;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .menu-btn::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .menu-btn span {
-            position: relative;
-            z-index: 1;
-        }
-
-        .menu-btn:hover {
-            transform: translateY(-3px);
-            border-color: var(--primary);
-            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.4);
-        }
-
-        .menu-btn:hover::before {
-            opacity: 1;
-        }
-
-        .menu-btn:active {
-            transform: translateY(-1px);
-        }
-
-        .menu-btn.secondary {
-            background: linear-gradient(135deg, rgba(123, 47, 247, 0.1), rgba(255, 46, 99, 0.1));
-        }
-
-        .menu-btn.secondary:hover {
-            border-color: var(--secondary);
-            box-shadow: 0 10px 30px rgba(123, 47, 247, 0.4);
-        }
-
-        .user-info {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            color: var(--text-dim);
-            font-size: 12px;
-            letter-spacing: 1px;
-        }
-
-        .user-info a {
-            color: var(--primary);
-            text-decoration: none;
-            margin-left: 10px;
-        }
-
-        .user-info a:hover {
-            text-decoration: underline;
-        }
-
-        @@media (max-width: 480px) {
-            .title { font-size: 48px; }
-            .menu-btn { width: 240px; font-size: 16px; }
-        }
-    </style>
+    <link rel="stylesheet" href="~/css/subterra.css" asp-append-version="true" />
 </head>
 <body>
-    <div class="user-info">
-        Hola, @ViewBag.Nombre
+    <div class="usuario">
+        <span>* Hola, @ViewBag.Nombre</span>
         <a href="/Home/Logout">[Salir]</a>
     </div>
 
-    <div class="container">
-        <h1 class="title">SUBTERRA</h1>
-        <p class="subtitle">Aventura · Puzzle · Exploración</p>
+    <h1 class="titulo">SUBTERRA</h1>
+    <p class="subtitulo">AVENTURA · PUZZLE · EXPLORACIÓN</p>
 
-        <div class="menu-buttons">
-            <a href="/Home/Tutorial" class="menu-btn">
-                <span>Tutorial</span>
-            </a>
-            <a href="/Home/Juego" class="menu-btn secondary">
-                <span>Jugar</span>
-            </a>
-        </div>
-    </div>
+    <nav class="opciones" id="menu">
+        <a href="/Home/Tutorial" class="opcion sel">
+            <svg class="alma" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 0h2v1h-2zM12 0h2v1h-2zM1 1h5v1h-5zM10 1h5v1h-5zM0 2h7v2h-7zM9 2h7v2h-7zM0 4h16v6h-16zM2 10h12v2h-12zM4 12h8v2h-8zM6 14h4v2h-4z" /></svg>
+            <span>Tutorial</span>
+        </a>
+        <a href="/Home/Juego" class="opcion">
+            <svg class="alma" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 0h2v1h-2zM12 0h2v1h-2zM1 1h5v1h-5zM10 1h5v1h-5zM0 2h7v2h-7zM9 2h7v2h-7zM0 4h16v6h-16zM2 10h12v2h-12zM4 12h8v2h-8zM6 14h4v2h-4z" /></svg>
+            <span>Jugar</span>
+        </a>
+    </nav>
 
-    <script>
-        // Partículas flotantes
-        document.addEventListener('DOMContentLoaded', () => {
-            for (let i = 0; i < 20; i++) {
-                const particle = document.createElement('div');
-                particle.style.cssText = `
-                    position: fixed;
-                    width: ${Math.random() * 4 + 2}px;
-                    height: ${Math.random() * 4 + 2}px;
-                    background: rgba(0, 212, 255, ${Math.random() * 0.5 + 0.2});
-                    border-radius: 50%;
-                    left: ${Math.random() * 100}%;
-                    top: ${Math.random() * 100}%;
-                    animation: float ${Math.random() * 10 + 10}s linear infinite;
-                    pointer-events: none;
-                    z-index: 0;
-                `;
-                document.body.appendChild(particle);
-            }
-        });
-    </script>
+    <p class="ayuda">[FLECHAS] MOVERSE &nbsp;&nbsp; [Z / ENTER] ELEGIR</p>
+    <div class="ruinas"></div>
+
+    <script src="~/js/menuAlma.js" asp-append-version="true"></script>
+    <script>menuAlma(document.getElementById("menu"), { teclado: true });</script>
 </body>
 </html>
