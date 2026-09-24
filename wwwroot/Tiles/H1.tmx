@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="34" height="15" tilewidth="20" tileheight="20" infinite="1" nextlayerid="15" nextobjectid="480">
+<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="34" height="15" tilewidth="20" tileheight="20" infinite="1" nextlayerid="15" nextobjectid="481">
+ <editorsettings>
+  <export target="H1.tmj" format="json"/>
+ </editorsettings>
  <tileset firstgid="1" source="../../habitaciones/habitaciones/bg_ruinseasynam2.tsx"/>
  <tileset firstgid="73" source="../../habitaciones/habitaciones/bg_ruinseasynam3.tsx"/>
  <tileset firstgid="225" source="../../habitaciones/habitaciones/bg_tundratiles.tsx"/>
@@ -86,7 +89,6 @@
  </objectgroup>
  <objectgroup id="8" name="Interactuable-Piso">
   <object id="477" name="Spawn" x="1559.94" y="740.063" width="20.0625" height="19.8125"/>
-  <object id="478" name="PEL1" x="1481.5" y="682.5" width="31" height="37.5"/>
   <object id="479" name="2" x="2030.33" y="746.821" width="20.0625" height="19.8125"/>
  </objectgroup>
  <objectgroup id="10" name="Interactuable-Pared">

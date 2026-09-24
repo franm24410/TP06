@@ -42,25 +42,34 @@
   // Hielo: te deslizás en la dirección en que arrancaste hasta chocar
   // una pared, salir del hielo o caerte en un "caida".
   // =====================================================================
-  let hielo = null;       // {dx, dy} mientras te deslizás
+  let hielo = null;       // {dx, dy, t} mientras te deslizás
+  const GRACIA_DIAGONAL = 5; // cuadros al arrancar en los que se puede sumar la otra tecla (diagonal)
+  // Mueve y devuelve true si chocó contra una pared en alguno de los ejes del deslizamiento
+  function deslizar(p) {
+    const bx = p.x, by = p.y;
+    moveWithWallCollision(p, hielo.dx, hielo.dy);
+    return (hielo.dx !== 0 && p.x === bx) || (hielo.dy !== 0 && p.y === by);
+  }
   function moverJugador(p, dx, dy, vel) {
     refrescar();
     if (hielo) {
       if (!sobre(p, hielos)) { hielo = null; }
       else {
-        const bx = p.x, by = p.y;
-        moveWithWallCollision(p, hielo.dx, hielo.dy);
-        if (p.x === bx && p.y === by) hielo = null;          // chocó contra una pared
-        else if (!sobre(p, hielos)) hielo = null;            // salió del hielo
+        // al arrancar, si apretás la otra flecha enseguida, el deslizamiento pasa a ser diagonal
+        hielo.t++;
+        if (hielo.t <= GRACIA_DIAGONAL) {
+          if (!hielo.dx && dx) hielo.dx = Math.sign(dx) * vel;
+          if (!hielo.dy && dy) hielo.dy = Math.sign(dy) * vel;
+        }
+        if (deslizar(p)) hielo = null;                        // chocó contra una pared
+        else if (!sobre(p, hielos)) hielo = null;             // salió del hielo
         return;
       }
     }
     if (hielos.length && (dx || dy) && sobre(p, hielos)) {
-      // arranca a deslizarse (si venías en diagonal, gana el movimiento horizontal)
-      hielo = dx ? { dx: Math.sign(dx) * vel, dy: 0 } : { dx: 0, dy: Math.sign(dy) * vel };
-      const bx = p.x, by = p.y;
-      moveWithWallCollision(p, hielo.dx, hielo.dy);
-      if (p.x === bx && p.y === by) hielo = null;
+      // arranca a deslizarse en la dirección que venías (recta o diagonal)
+      hielo = { dx: Math.sign(dx) * vel, dy: Math.sign(dy) * vel, t: 0 };
+      if (deslizar(p)) hielo = null;
       return;
     }
     moveWithWallCollision(p, dx, dy);
@@ -81,20 +90,23 @@
   // =====================================================================
   function estadoINT() { if (!ESTADO.botonesINT) ESTADO.botonesINT = {}; return ESTADO.botonesINT; }
   function botonesINTCompletos() { const e = (typeof ESTADO !== "undefined" && ESTADO.botonesINT) || {}; return INTS.every(n => e[n]); }
-  function checkBotonesINT(p) {
+  // Se aprietan con E estando al lado del botón (ver el keydown de más abajo).
+  function checkBotonesINT(p) { refrescar(); }        // (site.js lo llama en cada paso; ya no hace nada solo)
+  function intCerca(p) {
     refrescar();
-    if (!ints.length) return;
-    const r = inflar(p, 4), est = estadoINT();
-    for (const o of ints) {
-      const n = o.name.trim().toUpperCase();
-      if (est[n] || !rectsOverlap(r, o)) continue;
-      est[n] = true;
-      const hechos = INTS.filter(x => est[x]).length;
-      sonido("snd_bell", 0.4);
-      if (hechos >= INTS.length) abrirSign("* Apretaste el botón. (" + hechos + "/" + INTS.length + ")\n* Se escuchó un clic a lo lejos...\n* ¡Los pinchos se bajaron!");
-      else abrirSign("* Apretaste el botón. (" + hechos + "/" + INTS.length + ")");
-      break;
-    }
+    const r = inflar(p, 8);
+    return ints.find(o => rectsOverlap(r, o)) || null;
+  }
+  function apretarINT(o) {
+    const est = estadoINT();
+    const n = o.name.trim().toUpperCase();
+    if (est[n]) { abrirSign("* El botón ya está apretado."); return; }
+    est[n] = true;
+    const hechos = INTS.filter(x => est[x]).length;
+    if (window.Musica) Musica.sfx(hechos >= INTS.length ? "pinchos" : "boton");
+    else sonido("snd_bell", 0.4);
+    if (hechos >= INTS.length) abrirSign("* Apretaste el botón. (" + hechos + "/" + INTS.length + ")\n* Se escuchó un clic a lo lejos...\n* ¡Los pinchos se bajaron!");
+    else abrirSign("* Apretaste el botón. (" + hechos + "/" + INTS.length + ")");
   }
 
   // =====================================================================
@@ -104,6 +116,7 @@
   function nuevoObjetivo() { return PASOS.min + Math.floor(Math.random() * (PASOS.max - PASOS.min + 1)); }
   function paso() {
     if (window.MODO_TUTORIAL || !window.EnemyFight || hielo) return;
+    if (window.MODO_FANTASMA) return;                  // [PRUEBAS] en modo fantasma (H) no salen monstruos
     const lista = MAPAS[currentMapName];
     if (!lista || !lista.length) return;
     pasos++;
@@ -192,6 +205,7 @@
   const es = (k, g) => T[g].includes(k);
   window.addEventListener("keydown", (e) => {
     if ((window.EnemyFight && window.EnemyFight.activa) || (window.SansFight && window.SansFight.activa)) return;
+    if (window.Guardias && window.Guardias.activo) return;     // escena de la Guardia Real
     const k = e.key.toLowerCase();
     if (gui) {
       e.preventDefault(); e.stopPropagation();
@@ -219,7 +233,9 @@
     if (k === "enter") { e.preventDefault(); e.stopPropagation(); abrirMochila(); return; }
     if (k === "e") {
       const item = tiendaCerca(player);
-      if (item) { e.preventDefault(); e.stopPropagation(); abrirTienda(item); }
+      if (item) { e.preventDefault(); e.stopPropagation(); abrirTienda(item); return; }
+      const boton = intCerca(player);
+      if (boton) { e.preventDefault(); e.stopPropagation(); apretarINT(boton); }
     }
   }, true);
 

@@ -320,18 +320,6 @@
                  "y":740.063
                 }, 
                 {
-                 "height":37.5,
-                 "id":478,
-                 "name":"PEL1",
-                 "opacity":1,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":31,
-                 "x":1481.5,
-                 "y":682.5
-                }, 
-                {
                  "height":19.8125,
                  "id":479,
                  "name":"2",
@@ -340,8 +328,8 @@
                  "type":"",
                  "visible":true,
                  "width":20.0625,
-                 "x":2030.33238636364,
-                 "y":746.821022727273
+                 "x":2030.33,
+                 "y":746.821
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -384,7 +372,7 @@
          "y":0
         }],
  "nextlayerid":15,
- "nextobjectid":480,
+ "nextobjectid":481,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",

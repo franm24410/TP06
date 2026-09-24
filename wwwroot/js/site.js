@@ -37,13 +37,14 @@ btnGuardar.addEventListener("click", () => {
     return;
   }
   snapshotPiedras();
+  if (window.Jugador) Jugador.curarTodo();      // guardar te recupera toda la vida
   ESTADO.jugador = { x: player.x, y: player.y };
   ESTADO.ultimoGuardado = { mapa: currentMapName, x: player.x, y: player.y };
   fetch("/Partida/Guardar", {
     method:"POST", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ Datos: JSON.stringify(ESTADO) })
   }).then(r=>r.json()).then(()=>{
-    saveMsg.textContent = "✔ Partida guardada";
+    saveMsg.textContent = "✔ Partida guardada · HP al máximo";
     setTimeout(cerrarSave, 700);
   }).catch(()=>{ saveMsg.textContent="✖ Error al guardar"; });
 });
@@ -54,6 +55,9 @@ document.addEventListener("keydown", (e)=>{
   const tecla = e.key.toLowerCase();
 
   if (signAbierta || saveAbierta){ cerrarSign(); cerrarSave(); e.preventDefault(); return; }
+
+  // [PRUEBAS] H = modo fantasma: atravesás paredes, pinchos y piedras. Borrar al terminar de testear.
+  if (tecla === "h"){ window.MODO_FANTASMA = !window.MODO_FANTASMA; e.preventDefault(); return; }
 
   if (tecla === "e"){
     const cartel = getSignAtPlayer(player);
@@ -112,6 +116,8 @@ function actualizarFrame(dt,mov){
 function update(dt){
   if (window.SansFight && window.SansFight.activa) return; // pelea activa: el mapa queda congelado
   if (window.EnemyFight && window.EnemyFight.activa) return;
+  if (window.Guardias && window.Guardias.activo){ Guardias.update(dt); return; }   // escena de la Guardia Real (PEL2)
+  if (fundidoPEL){ tickFundido(dt); return; }                // fundido a negro antes de PEL1 / PEL3
   if (isTransitioning()){ updateDoorTransition(dt); return; }
   if (signAbierta || saveAbierta) return;
   if (window.Mundo && Mundo.guiAbierta) return;            // mochila / tienda abiertas
@@ -128,6 +134,7 @@ function update(dt){
   // cada cuadro de la animación de caminar cuenta como un paso (para los encuentros)
   if (window.Mundo && mov && frameActual!==frameAntes && (player.x!==antesX || player.y!==antesY)) Mundo.paso();
   if (window.MODO_TUTORIAL && checkSalidaTutorial(player)) return;
+  if (checkSalidaMenu(player)) return;                         // ph43 -> menú (después, créditos)
   checkDoors(player);
   checkButtons(player);
   checkCaidas(player);
@@ -141,14 +148,49 @@ function draw(){
   drawSpikes(ctx,camera);
   drawButtonOverlays(ctx,canvas,camera);
   drawPIOverlays(ctx,canvas,camera);
+  if (window.Guardias) Guardias.dibujar(ctx,camera,"atras");
   // fallback a idle si el frame de la dirección aún no cargó
   let sp=sprites[direccionActual][frameActual];
   if(!sp||!sp.cargada) sp=sprites.idle[0];
   if(sp&&sp.cargada) ctx.drawImage(sp, Math.round(player.x-camera.x), Math.round(player.y-camera.y), player.width, player.height);
+  if (window.Guardias) Guardias.dibujar(ctx,camera,"adelante");
   drawTransitionOverlay(ctx,canvas);
+  if (fundidoPEL){ ctx.save(); ctx.globalAlpha=Math.min(1,fundidoPEL.t/fundidoPEL.dur); ctx.fillStyle="#000"; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.restore(); }
+  if (window.MODO_FANTASMA){ ctx.save(); ctx.font="bold 14px monospace"; ctx.fillStyle="#ff0"; ctx.fillText("MODO FANTASMA (H)",8,18); ctx.restore(); }
+  if (window.Guardias) Guardias.dibujar(ctx,camera,"texto");
 }
 let ultimo=0;
-function loop(ts){ const dt=ts-ultimo; ultimo=ts; update(dt||16); draw(); requestAnimationFrame(loop); }
+function loop(ts){ const dt=ts-ultimo; ultimo=ts; update(dt||16); draw(); if (window.Musica) Musica.tick(); requestAnimationFrame(loop); }
+
+// ---------- fundido a negro antes de las peleas de PEL1 y PEL3 ----------
+// (igual que al pasar una puerta, así la pelea no aparece de golpe)
+let fundidoPEL=null;
+function fundidoAntesDePelea(cb){
+  if (fundidoPEL) return;
+  frenar();
+  fundidoPEL={ t:0, dur:TRANSITION_HALF+150, cb };
+}
+function tickFundido(dt){
+  fundidoPEL.t+=dt;
+  if (fundidoPEL.t<fundidoPEL.dur) return;
+  const cb=fundidoPEL.cb;
+  cb();                    // la pelea tapa la pantalla; el mapa vuelve a verse cuando termina
+  fundidoPEL=null;
+}
+
+// ---------- salida a menú: puerta ph43 ----------
+// Por ahora te lleva al menú; después va a llevar a los créditos.
+let saliendoAlMenu=false;
+function checkSalidaMenu(p){
+  if (saliendoAlMenu) return true;
+  const salida = findObjectByName("ph43");
+  if (!salida || !rectsOverlap(p, salida)) return false;
+  saliendoAlMenu=true;
+  frenar();
+  startDoorTransition(p, { targetMap: currentMapName, x: p.x, y: p.y, duracion: 400 });
+  setTimeout(() => { window.location.href = "/Home/Menu"; }, 400);
+  return true;
+}
 
 // ---------- tutorial ----------
 // Tutorial.cshtml pone MODO_TUTORIAL = true: arranca siempre en H21 sobre "spawnT"
