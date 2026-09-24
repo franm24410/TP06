@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="20" tileheight="20" infinite="1" nextlayerid="10" nextobjectid="20">
+<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="20" tileheight="20" infinite="1" nextlayerid="10" nextobjectid="21">
  <editorsettings>
   <export target="H23.tmj" format="json"/>
  </editorsettings>
  <tileset firstgid="1" source="bg_sanscorridor.tsx"/>
  <tileset firstgid="61" source="bg_castle_realdoor.tsx"/>
+ <tileset firstgid="81" source="spr_savepoint_0.tsx"/>
  <layer id="1" name="background" width="70" height="12">
   <data encoding="csv"/>
  </layer>
@@ -113,7 +114,7 @@
 0,0,0,0,0,60,60,0,0,60,60,60,60,0,0,0,
 0,0,0,0,0,55,56,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,58,59,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,81,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -296,6 +297,7 @@
  <objectgroup id="7" name="Interactuable-Piso">
   <object id="16" name="41" x="149" y="128.5" width="20" height="20"/>
   <object id="19" name="PEL1" x="1046.83" y="108.25" width="31" height="90.8333"/>
+  <object id="20" name="GUA5" x="110.182" y="170.364"/>
  </objectgroup>
  <objectgroup id="8" name="Interactuable-Pared"/>
  <objectgroup id="9" name="Doors">

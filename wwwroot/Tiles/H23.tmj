@@ -4,7 +4,7 @@
  "layers":[
         {
          "chunks":[],
-         "height":0,
+         "height":16,
          "id":1,
          "name":"background",
          "opacity":1,
@@ -12,7 +12,7 @@
          "starty":0,
          "type":"tilelayer",
          "visible":true,
-         "width":0,
+         "width":16,
          "x":0,
          "y":0
         }, 
@@ -151,7 +151,7 @@
                     0, 0, 0, 0, 0, 60, 60, 0, 0, 60, 60, 60, 60, 0, 0, 0,
                     0, 0, 0, 0, 0, 55, 56, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 58, 59, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 81, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -441,7 +441,7 @@
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":1038.33333333333,
+                 "width":1038.33,
                  "x":180,
                  "y":-0.5
                 }, 
@@ -589,7 +589,7 @@
                  "y":128.5
                 }, 
                 {
-                 "height":90.8333333333333,
+                 "height":90.8333,
                  "id":19,
                  "name":"PEL1",
                  "opacity":1,
@@ -597,8 +597,20 @@
                  "type":"",
                  "visible":true,
                  "width":31,
-                 "x":1046.83333333333,
+                 "x":1046.83,
                  "y":108.25
+                }, 
+                {
+                 "height":0,
+                 "id":20,
+                 "name":"GUA5",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":110.181818181818,
+                 "y":170.363636363636
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -623,7 +635,7 @@
          "name":"Doors",
          "objects":[
                 {
-                 "height":78.9583666666667,
+                 "height":78.9584,
                  "id":18,
                  "name":"ph43",
                  "opacity":1,
@@ -646,9 +658,9 @@
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":40.0000333333332,
-                 "x":1220.83331666667,
-                 "y":40.35415
+                 "width":40,
+                 "x":1220.83,
+                 "y":40.3541
                 }, 
                 {
                  "height":75.2917,
@@ -675,8 +687,8 @@
                  "type":"",
                  "visible":true,
                  "width":37.6667,
-                 "x":140.66665,
-                 "y":44.85415
+                 "x":140.667,
+                 "y":44.8541
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -685,7 +697,7 @@
          "y":0
         }],
  "nextlayerid":10,
- "nextobjectid":20,
+ "nextobjectid":21,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",
@@ -698,6 +710,10 @@
         {
          "firstgid":61,
          "source":"bg_castle_realdoor.tsx"
+        }, 
+        {
+         "firstgid":81,
+         "source":"spr_savepoint_0.tsx"
         }],
  "tilewidth":20,
  "type":"map",

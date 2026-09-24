@@ -178,8 +178,8 @@ function tickFundido(dt){
   fundidoPEL=null;
 }
 
-// ---------- salida a menú: puerta ph43 ----------
-// Por ahora te lleva al menú; después va a llevar a los créditos.
+// ---------- salida: puerta ph43 ----------
+// Te muestra los créditos (creditos.js) y después te lleva al menú.
 let saliendoAlMenu=false;
 function checkSalidaMenu(p){
   if (saliendoAlMenu) return true;
@@ -188,7 +188,8 @@ function checkSalidaMenu(p){
   saliendoAlMenu=true;
   frenar();
   startDoorTransition(p, { targetMap: currentMapName, x: p.x, y: p.y, duracion: 400 });
-  setTimeout(() => { window.location.href = "/Home/Menu"; }, 400);
+  const alMenu = () => { window.location.href = "/Home/Menu"; };
+  setTimeout(() => { if (window.Creditos) Creditos.iniciar(alMenu); else alMenu(); }, 400);
   return true;
 }
 

@@ -240,7 +240,10 @@ function checkPeleas(p){
     if(!rectsOverlap(p,pl)) continue;
     const nombre = pl.name.trim().toUpperCase();
     // PEL1 y PEL3: primero se funde a negro (como las puertas) y después arranca la pelea
-    if (nombre==="PEL1" && window.SansFight && !window.SansFight.activa){
+    // (si ya le ganaste a Sans no se hace el fundido: si no, parado sobre PEL1
+    // la pantalla parpadeaba a negro cada frame y costaba moverse)
+    if (nombre==="PEL1" && window.SansFight && !window.SansFight.activa &&
+        !(ESTADO && ESTADO.peleasGanadas && ESTADO.peleasGanadas.PEL1)){
       if (typeof fundidoAntesDePelea==="function") fundidoAntesDePelea(()=>window.SansFight.iniciar(p));
       else window.SansFight.iniciar(p);
     }
@@ -502,22 +505,27 @@ function updatePiedras(p){
 }
 function empujarPiedra(p,dx,dy){
   if(isTransitioning()||(!dx&&!dy)) return false;
-  const m=6; const ex={x:p.x-m,y:p.y-m,width:p.width+m*2,height:p.height+m*2};
-  for (const s of stones){
-    if(s.locked||s.sliding) continue;
-    if(!rectsOverlap(ex,s)) continue;
-    const cpx=p.x+p.width/2, cpy=p.y+p.height/2, csx=s.x+s.width/2, csy=s.y+s.height/2;
-    let dX=0,dY=0;
-    if(dx!==0) dX = (dx>0 ? (csx>=cpx) : (csx<=cpx)) ? Math.sign(dx) : 0;
-    else if(dy!==0) dY = (dy>0 ? (csy>=cpy) : (csy<=cpy)) ? Math.sign(dy) : 0;
-    if(!dX&&!dY) continue;
-    const t=tileDePiedra(s);
-    if(!celdaLibrePiedra(s,t.x+dX,t.y+dY)) continue;
-    s.sliding={dx:dX,dy:dY};
-    if (window.Musica) Musica.sfx("empujar");
-    return true;
+  // Rayo de 1px que sale del CENTRO de la hitbox del jugador hacia donde mira y
+  // pasa m px más allá del borde: solo se empuja la piedra que toca ese rayo
+  // (la más cercana), no cualquiera que esté rozando el costado.
+  const m=6;
+  const dX=Math.sign(dx), dY=dX?0:Math.sign(dy);
+  const cpx=p.x+p.width/2, cpy=p.y+p.height/2;
+  const largoX=p.width/2+m, largoY=p.height/2+m;
+  const rayo = dX ? { x: dX>0 ? cpx : cpx-largoX, y: cpy-0.5, width: largoX, height: 1 }
+                  : { x: cpx-0.5, y: dY>0 ? cpy : cpy-largoY, width: 1, height: largoY };
+  let s=null, mejor=Infinity;
+  for (const o of stones){
+    if(!rectsOverlap(rayo,o)) continue;
+    const dist = dX ? Math.abs(o.x+o.width/2-cpx) : Math.abs(o.y+o.height/2-cpy);
+    if(dist<mejor){ mejor=dist; s=o; }
   }
-  return false;
+  if(!s||s.locked||s.sliding) return false;
+  const t=tileDePiedra(s);
+  if(!celdaLibrePiedra(s,t.x+dX,t.y+dY)) return false;
+  s.sliding={dx:dX,dy:dY};
+  if (window.Musica) Musica.sfx("empujar");
+  return true;
 }
 function resetPiedrasPuzzle(num){
   for (const s of stones){ if(s.puzzle!==num) continue;

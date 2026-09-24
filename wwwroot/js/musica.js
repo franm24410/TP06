@@ -53,7 +53,7 @@
   // site.js lo llama en cada cuadro
   function tick() {
     if (typeof currentMapName !== "undefined" && currentMapName) {
-      const p = pistaDe(currentMapName);
+      const p = (window.Creditos && Creditos.activo) ? "mus_menu0" : pistaDe(currentMapName);
       if (p !== pista) poner(p);
     }
     if (!actual || !desbloqueado) return;

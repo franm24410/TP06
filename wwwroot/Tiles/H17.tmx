@@ -126,7 +126,7 @@
   <object id="203" x="5019.75" y="1679.5" width="160.75" height="41.5"/>
   <object id="205" x="5020" y="1558.5" width="159.75" height="68.5833"/>
   <object id="208" x="4278.67" y="1537.33" width="740" height="49.3333"/>
-  <object id="477" name="PIN5" x="4359" y="1599.67" width="21.3333" height="120.667"/>
+  <object id="477" name="PIN5" x="4359" y="1599.67" width="39.8333" height="120.667"/>
  </objectgroup>
  <objectgroup id="8" name="Interactuable-Piso">
   <object id="478" name="31" x="4275.75" y="1647" width="20" height="20.5"/>

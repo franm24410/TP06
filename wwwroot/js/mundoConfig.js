@@ -9,10 +9,10 @@ const ENCUENTROS_PASOS = { min: 50, max: 100 };
 const RUINAS = ["froggit", "whimsun", "moldsmal", "loox", "vegetoid"];
 const NIEVE = ["snowdrake", "icecap"];
 const ENCUENTROS_MAPAS = {
-  // H1 es la sala de Sans y H21 el tutorial: sin peleas
+  // H1 es la sala de Sans, H20 el puzzle final y H21 el tutorial: sin peleas
   H2: RUINAS, H3: RUINAS, H4: RUINAS, H5: RUINAS, H6: RUINAS, H7: RUINAS, H8: RUINAS,
   H9: RUINAS, H10: RUINAS, H11: RUINAS, H12: RUINAS, H13: RUINAS,
-  H14: NIEVE, H15: NIEVE, H16: NIEVE, H17: NIEVE, H18: NIEVE, H19: NIEVE, H20: NIEVE
+  H14: NIEVE, H15: NIEVE, H16: NIEVE, H17: NIEVE, H18: NIEVE, H19: NIEVE
 };
 
 // ---------- Música de ambiente (ver musica.js) ----------
