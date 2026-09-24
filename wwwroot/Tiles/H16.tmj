@@ -244,18 +244,25 @@
          "y":0
         }, 
         {
-         "chunks":[],
+         "chunks":[
+                {
+                 "data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAegUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+                 "height":16,
+                 "width":16,
+                 "x":224,
+                 "y":64
+                }],
          "compression":"",
          "encoding":"base64",
-         "height":0,
+         "height":16,
          "id":11,
          "name":"Objeto",
          "opacity":1,
-         "startx":0,
-         "starty":0,
+         "startx":224,
+         "starty":64,
          "type":"tilelayer",
          "visible":true,
-         "width":0,
+         "width":16,
          "x":0,
          "y":0
         }, 
@@ -404,86 +411,86 @@
                  "y":1401
                 }, 
                 {
-                 "height":40.5,
+                 "height":32.5,
                  "id":364,
                  "name":"caida",
                  "opacity":1,
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":32.5,
-                 "x":4824.5,
-                 "y":1100.75
+                 "width":28.75,
+                 "x":4828.25,
+                 "y":1108.75
                 }, 
                 {
-                 "height":55.5,
+                 "height":49.5,
                  "id":365,
                  "name":"caida",
                  "opacity":1,
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":32.5,
-                 "x":4824.5,
+                 "width":28.25,
+                 "x":4828.75,
                  "y":982.75
                 }, 
                 {
-                 "height":36.75,
+                 "height":29.5,
                  "id":366,
                  "name":"caida",
                  "opacity":1,
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":32.5,
-                 "x":4744.25,
-                 "y":1061.75
+                 "width":29.25,
+                 "x":4747.5,
+                 "y":1065.75
                 }, 
                 {
-                 "height":38.25,
+                 "height":34.25,
                  "id":367,
                  "name":"caida",
                  "opacity":1,
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":32.5,
-                 "x":4743.75,
+                 "width":27.5,
+                 "x":4748.75,
                  "y":980.75
                 }, 
                 {
-                 "height":76.5,
+                 "height":61.25,
                  "id":368,
                  "name":"caida",
                  "opacity":1,
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":32.5,
-                 "x":4663.75,
-                 "y":1022.5
+                 "width":27.25,
+                 "x":4666.75,
+                 "y":1031.75
                 }, 
                 {
-                 "height":56.25,
+                 "height":50.431818181818,
                  "id":369,
                  "name":"caida",
                  "opacity":1,
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":32.5,
+                 "width":28,
                  "x":4584.25,
-                 "y":1083
+                 "y":1088.81818181818
                 }, 
                 {
-                 "height":54.5,
+                 "height":46.681818181818,
                  "id":370,
                  "name":"caida",
                  "opacity":1,
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":32.5,
+                 "width":29.75,
                  "x":4583.25,
                  "y":984.25
                 }, 
@@ -510,6 +517,55 @@
                  "width":134.833366666666,
                  "x":4880.08333333333,
                  "y":933.416666666667
+                }, 
+                {
+                 "height":21.2045454545453,
+                 "id":478,
+                 "name":"C43",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":20.295454545454,
+                 "x":4719.625,
+                 "y":1339.03409090909
+                },
+            
+                {
+                 "height":18,
+                 "id":479,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":16,
+                 "x":4722.22727272727,
+                 "y":1340.13636363636
+                }, 
+                {
+                 "height":18,
+                 "id":480,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":16,
+                 "x":4501.81818181818,
+                 "y":1000.63636363636
+                }, 
+                {
+                 "height":21.2045,
+                 "id":481,
+                 "name":"C45",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":20.2955,
+                 "x":4499.67043181818,
+                 "y":998.852295454545
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -635,7 +691,7 @@
          "y":0
         }],
  "nextlayerid":15,
- "nextobjectid":478,
+ "nextobjectid":482,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",
@@ -704,6 +760,11 @@
         {
          "firstgid":1306,
          "source":"bg_ruintiles1.tsx"
+        },
+    
+        {
+         "firstgid":1402,
+         "source":"..\/..\/habitaciones\/habitaciones\/spr_npc_sign_0.tsx"
         }],
  "tilewidth":20,
  "type":"map",

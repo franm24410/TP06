@@ -15,6 +15,15 @@ const ENCUENTROS_MAPAS = {
   H14: NIEVE, H15: NIEVE, H16: NIEVE, H17: NIEVE, H18: NIEVE, H19: NIEVE, H20: NIEVE
 };
 
+// ---------- Música de ambiente (ver musica.js) ----------
+// mapa -> tema (archivo en wwwroot/Audio, sin el .ogg). "*" = el resto. null = silencio.
+// Temas: mus_ruins (Ruinas), mus_snowy (Snowdin), mus_house1 ("Home"), mus_menu0 (menú)
+const MUSICA_MAPAS = {
+  "*": "mus_ruins",
+  H14: "mus_snowy", H15: "mus_snowy", H16: "mus_snowy", H17: "mus_snowy", H18: "mus_snowy", H19: "mus_snowy", H20: "mus_snowy",
+  H23: "mus_house1"                          // Salón del Juicio
+};
+
 // ---------- Tiendas (tocá E al lado de la hitbox) ----------
 // hitbox -> id del ítem (los ítems están en jugador.js)
 const TIENDAS = {

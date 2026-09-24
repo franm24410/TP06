@@ -34,5 +34,17 @@
 
     <script src="~/js/menuAlma.js" asp-append-version="true"></script>
     <script>menuAlma(document.getElementById("menu"), { teclado: true });</script>
+    <script>
+        // Música del menú (Start Menu de Undertale). Si el navegador no deja
+        // reproducir antes de tocar algo, arranca con la primera tecla o clic.
+        (function () {
+            const m = new Audio("/Audio/mus_menu0.ogg");
+            m.loop = true; m.volume = 0.4;
+            const sonar = () => { if (m.paused) m.play().catch(() => { }); };
+            sonar();
+            window.addEventListener("keydown", sonar, true);
+            window.addEventListener("pointerdown", sonar, true);
+        })();
+    </script>
 </body>
 </html>

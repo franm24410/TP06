@@ -15,7 +15,8 @@ const PI_RECORTES = {
 const PI_DX = 0;
 const PI_DY = 0;
 const SPIKE_PUZZLE = {
-    4: 3   // PIN4 -> PUZ3: se abre junto con PIN3
+    4: 3,  // PIN4 -> PUZ3: se abre junto con PIN3
+    6: 4   // PIN6 -> PUZ4: se bajan al resolver el puzzle de piedras de H20
 };
 
 // Pinchos que se bajan cuando tocás los botones INT1, INT2 e INT3 (ver mundoConfig.js)

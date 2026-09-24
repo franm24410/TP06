@@ -38,7 +38,9 @@ const TILESET_CONFIG = {
   "spr_spiketile_1.tsx":      { image:"spr_spiketile_1.png",      columns:1 },
   "spr_papyrushouse_0.tsx":   { image:"spr_papyrushouse_0.png",   columns:1 },
   "spr_snowdinlogo_ja_0.tsx": { image:"spr_snowdinlogo_ja_0.png", columns:1 },
-  "spr_vinespillar_0.tsx":    { image:"spr_vinespillar_0.png",    columns:1 }
+  "spr_vinespillar_0.tsx":    { image:"spr_vinespillar_0.png",    columns:1 },
+  "bg_sanscorridor.tsx":      { image:"bg_sanscorridor.png",      columns:3 },   // H23: el Salón del Juicio
+  "bg_castle_realdoor.tsx":   { image:"bg_castle_realdoor.png",   columns:4 }
 };
 
 function getFileName(p){ return p ? p.split(/[\\/]/).pop() : null; }
@@ -91,7 +93,8 @@ function getLayerTiles(layer){
   const tiles=[];
   if (layer.chunks){
     for (const ch of layer.chunks){
-      const g = decodeChunkData(ch.data);
+      // Tiled puede exportar los chunks en base64 o en CSV (lista de números, ej. H22/H23)
+      const g = Array.isArray(ch.data) ? ch.data : decodeChunkData(ch.data);
       for (let r=0;r<ch.height;r++) for (let c=0;c<ch.width;c++){
         const gid = g[r*ch.width+c] & FLIP_MASK; if(!gid) continue;
         tiles.push({gid, tileX:ch.x+c, tileY:ch.y+r});
@@ -117,18 +120,18 @@ function getLayerTiles(layer){
 }
 const TILE_LAYER_NAMES = ["background","Piso","Paredes","Detalles-Piso","Detalles-Pared","Objeto"];
 const decodedLayers = {};
-// Capas de tiles que se dibujan en el mapa actual. Normalmente son las de
-// TILE_LAYER_NAMES; si el mapa no tiene ninguna de esas (ej. H21, con
-// "Capa de patrones 1" y "Carteles"), se dibujan todas sus capas de tiles
-// visibles, en el mismo orden que en Tiled.
+// Capas de tiles que se dibujan en el mapa actual: TODAS las capas de tiles
+// visibles, en el mismo orden que en Tiled (la de más arriba en Tiled se dibuja
+// encima). No importa cómo se llamen: así H20 ("Interactuable", "detalles-piso")
+// y H21 ("Capa de patrones 1", "Carteles") se ven igual que en Tiled.
+// Para no dibujar una capa, ocultala en Tiled (el ojito) y volvé a exportar.
 let capasTiles = TILE_LAYER_NAMES;
 function decodeAllLayers(){
-  const tl = mapData.layers.filter(x=>x.type==="tilelayer");
-  capasTiles = tl.some(x=>TILE_LAYER_NAMES.includes(x.name))
-    ? TILE_LAYER_NAMES
-    : tl.filter(x=>x.visible!==false).map(x=>x.name);
+  capasTiles = mapData.layers
+    .filter(x=>x.type==="tilelayer" && x.visible!==false)
+    .map(x=>x.name);
   for (const n of capasTiles){
-    const l = mapData.layers.find(x=>x.name===n);
+    const l = mapData.layers.find(x=>x.type==="tilelayer" && x.name===n);
     if (l) decodedLayers[n] = getLayerTiles(l);
   }
 }
@@ -191,6 +194,7 @@ function rectHitsWall(rect){
   return stones.some(s=>rectsOverlap(rect,s));
 }
 function moveWithWallCollision(p,dx,dy){
+  if (window.MODO_FANTASMA){ p.x+=dx; p.y+=dy; return; }   // [PRUEBAS] tecla H: atravesar todo (ver site.js)
   if (dx!==0){ const t={x:p.x+dx,y:p.y,width:p.width,height:p.height}; if(!rectHitsWall(t)) p.x+=dx; }
   if (dy!==0){ const t={x:p.x,y:p.y+dy,width:p.width,height:p.height}; if(!rectHitsWall(t)) p.y+=dy; }
 }
@@ -219,7 +223,8 @@ function checkCaidas(p){
 }
 
 // ---------- peleas (PELx) ----------
-// Hitbox que dispara una pelea contra un jefe (por ahora, PEL1 -> Sans).
+// Hitbox que dispara una pelea contra un jefe: PEL1 -> Sans, PEL2 -> Guardia Real,
+// PEL3 -> Undyne la Inmortal (las dos últimas en guardias.js).
 // window.SansFight lo define sansFight.js; si ese script no está cargado
 // todavía, tocar el hitbox simplemente no hace nada (no rompe el juego).
 let peleas=[];
@@ -234,8 +239,17 @@ function checkPeleas(p){
   for (const pl of peleas){
     if(!rectsOverlap(p,pl)) continue;
     const nombre = pl.name.trim().toUpperCase();
+    // PEL1 y PEL3: primero se funde a negro (como las puertas) y después arranca la pelea
     if (nombre==="PEL1" && window.SansFight && !window.SansFight.activa){
-      window.SansFight.iniciar(p);
+      if (typeof fundidoAntesDePelea==="function") fundidoAntesDePelea(()=>window.SansFight.iniciar(p));
+      else window.SansFight.iniciar(p);
+    }
+    if (nombre==="PEL2" && window.Guardias && !window.Guardias.activo){
+      window.Guardias.iniciar(p);                // (no se repite si ya la ganaste: ESTADO.guardiaReal)
+    }
+    if (nombre==="PEL3" && window.Undyne && !(ESTADO && ESTADO.undyneVencida)){
+      if (typeof fundidoAntesDePelea==="function") fundidoAntesDePelea(()=>window.Undyne.iniciar(p));
+      else window.Undyne.iniciar(p);             // (no se repite si ya la venciste: ESTADO.undyneVencida)
     }
     break;
   }
@@ -343,13 +357,14 @@ function checkButtons(p){
           if(num===e2){
             if(isButtonActive("TB"+e1)){
               puzzleEsperando=false; puzzleRonda++;
-              if(puzzleRonda>=seq.length){ ESTADO.puzzleBotones=true; }
+              if(puzzleRonda>=seq.length){ ESTADO.puzzleBotones=true; if(window.Musica) Musica.sfx("pinchos"); }
             } else resetPuzzleBotones();
           } else if(num!==e1) resetPuzzleBotones();
         }
       }
     }
     activateButton(b.name);
+    if (window.Musica) Musica.sfx("placa");       // pisaste una placa (TB)
     break;
   }
 }
@@ -390,8 +405,19 @@ function celdaLibrePiedra(s,tx,ty){
   if(stones.some(o=>o!==s&&rectsOverlap(r,o))) return false;
   return true;
 }
+// Centro de un objeto de Tiled. Los PUNTOS (PIx / PLx en H20) no tienen tamaño y
+// Tiled guarda su centro en (x, y); los rectángulos guardan la esquina de arriba a la izquierda.
+function centroObj(o){
+  const punto = !o.width && !o.height && !o.polygon && !o.polyline;
+  if (punto) return { x:o.x, y:o.y };
+  return { x:o.x+(o.width||TILE_W)/2, y:o.y+(o.height||TILE_H)/2 };
+}
+// Versión de cómo se guardan las piedras: si cambia, las posiciones guardadas con
+// la cuenta vieja (corridas media casilla) se descartan y las piedras vuelven a su lugar.
+const PIEDRAS_VERSION = 2;
 function initStoneObjects(){
   stones=[]; stoneTargets=[]; resetButtons=[];
+  if (ESTADO && ESTADO.piedrasVersion!==PIEDRAS_VERSION){ ESTADO.piedras={}; ESTADO.piedrasVersion=PIEDRAS_VERSION; }
   const arenas=[];
   for (const l of mapData.layers){ if(l.type!=="objectgroup") continue;
     for (const o of (l.objects||[])) if(o.name && /^PUZ\d+$/i.test(o.name))
@@ -402,7 +428,7 @@ function initStoneObjects(){
     for (const o of (l.objects||[])){
       if(!o.name) continue;
       if(/^PI\d+$/i.test(o.name)){
-        const cx=o.x+(o.width||TILE_W)/2, cy=o.y+(o.height||TILE_H)/2;
+        const { x:cx, y:cy } = centroObj(o);
         const ar=arenaFor(cx,cy);
         const s={name:o.name,num:parseInt(o.name.replace(/^PI/i,""),10),
           x:cx-tam/2,y:cy-tam/2,width:tam,height:tam,initX:cx-tam/2,initY:cy-tam/2,
@@ -411,9 +437,10 @@ function initStoneObjects(){
         stones.push(s);
       }
       else if(/^PL\d+$/i.test(o.name)){
-        const cx=o.x+(o.width||TILE_W)/2, cy=o.y+(o.height||TILE_H)/2;
+        const { x:cx, y:cy } = centroObj(o);
         const ar=arenaFor(cx,cy);
-        stoneTargets.push({name:o.name,x:o.x,y:o.y,width:o.width||TILE_W,height:o.height||TILE_H,
+        const w=o.width||TILE_W, h=o.height||TILE_H;
+        stoneTargets.push({name:o.name,x:cx-w/2,y:cy-h/2,width:w,height:h,     // (centrado en la placa)
           puzzle:ar?ar.num:null, occupied:false});
       }
       else if(/^RB\d+$/i.test(o.name)){
@@ -452,9 +479,10 @@ function stepStone(s){
     const t=findFreeTarget(s,r);
     if (t){ s.x=t.x+t.width/2-s.width/2; s.y=t.y+t.height/2-s.height/2;
       s.locked=true; s.sliding=null; s.targetName=t.name; t.occupied=true;
+      if (window.Musica) Musica.sfx("placa");     // la piedra quedó trabada en su lugar (PL)
       if(ESTADO){ if(!ESTADO.puzzlesPiedra) ESTADO.puzzlesPiedra={};
         const pls=stoneTargets.filter(x=>x.puzzle===s.puzzle);
-        if (pls.every(x=>x.occupied)) ESTADO.puzzlesPiedra[s.puzzle]=true; }
+        if (pls.every(x=>x.occupied)){ ESTADO.puzzlesPiedra[s.puzzle]=true; if(window.Musica) Musica.sfx("pinchos"); } }
       snapshotPiedras(); return; }
     if (hitsOtherStone(s,r)){ centrarPiedra(s); s.sliding=null; snapshotPiedras(); return; }
     if (wallObjects.some(w=>rectsOverlap(r,w))){ centrarPiedra(s); s.sliding=null; snapshotPiedras(); return; }
@@ -486,6 +514,7 @@ function empujarPiedra(p,dx,dy){
     const t=tileDePiedra(s);
     if(!celdaLibrePiedra(s,t.x+dX,t.y+dY)) continue;
     s.sliding={dx:dX,dy:dY};
+    if (window.Musica) Musica.sfx("empujar");
     return true;
   }
   return false;
@@ -541,8 +570,7 @@ function drawSpikes(ctx,cam){
 let signs=[], guardados=[];
 function initSignObjects(){
   signs=[]; guardados=[];
-  const cap = mapData.layers.find(l=>l.name==="Interactuable-Pared");
-  if (cap) for (const o of (cap.objects||[])) if(o.name && /^C\d+$/i.test(o.name)) signs.push(o);
+  for (const o of objetosDeCapa("Interactuable-Pared")) if(o.name && /^C\d+$/i.test(o.name)) signs.push(o);
   for (const l of mapData.layers){ if(l.type!=="objectgroup") continue;
     for (const o of (l.objects||[])) if(o.name && /^GUA\d+$/i.test(o.name)) guardados.push(o); }
 }
@@ -601,19 +629,22 @@ async function loadMap(name){
   const ruta=(typeof PI_IMAGEN!=="undefined"&&PI_IMAGEN)?PI_IMAGEN:null;
   if(ruta) piImage = loadedImages[ruta] || piImage;
 }
+// Objetos de las capas de objetos con ese nombre. Solo mira capas de OBJETOS (un mapa
+// puede tener además una capa de tiles con el mismo nombre, como H20) y junta todas
+// si hay más de una.
+function objetosDeCapa(nombre){
+  return mapData.layers.filter(l=>l.type==="objectgroup" && l.name===nombre).flatMap(l=>l.objects||[]);
+}
 function initMapObjects(){
-  const wl=mapData.layers.find(l=>l.name==="Interactuable");
-  wallObjects = wl ? wl.objects.filter(o=>{
+  wallObjects = objetosDeCapa("Interactuable").filter(o=>{
     if(!o.name) return true;
-    if(/^(PI|PL|RB|PUZ|PIN)\d+$/i.test(o.name)) return false;
+    if(/^(PI|PL|RB|PUZ|PIN|PEL)\d+$/i.test(o.name)) return false;   // (PELx se pisan: no son paredes)
     if(/^cai$/i.test(o.name.trim())) return false;
     if(/^caida$/i.test(o.name.trim())) return false;   // pozos del hielo: se pisan (ver mundo.js)
     return true;
-  }) : [];
-  const dl=mapData.layers.find(l=>l.name==="Doors");
-  doors = dl?dl.objects:[]; doorsByName={}; for (const d of doors) doorsByName[d.name]=d;
-  const bl=mapData.layers.find(l=>l.name===getPuzzleCapa());
-  buttons = bl?bl.objects:[]; buttonsByName={}; for (const b of buttons) if(b.name) buttonsByName[b.name]=b;
+  });
+  doors = objetosDeCapa("Doors"); doorsByName={}; for (const d of doors) doorsByName[d.name]=d;
+  buttons = objetosDeCapa(getPuzzleCapa()); buttonsByName={}; for (const b of buttons) if(b.name) buttonsByName[b.name]=b;
   const bc=TILESET_CONFIG["spr_groundswitch1_1.tsx"];
   if (bc && !buttonOnImage){ buttonOnImage=new Image(); buttonOnImage.src=TILE_FOLDER+bc.image; }
 }
