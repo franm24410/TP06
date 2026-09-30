@@ -6,6 +6,8 @@
  <tileset firstgid="1" source="bg_sanscorridor.tsx"/>
  <tileset firstgid="61" source="bg_castle_realdoor.tsx"/>
  <tileset firstgid="81" source="spr_savepoint_0.tsx"/>
+ <tileset firstgid="82" source="rsz_1chatgpt_image_29_sept_2026_07_49_46_pm.tsx"/>
+ <tileset firstgid="83" source="spr_savepoint_0.tsx"/>
  <layer id="1" name="background" width="70" height="12">
   <data encoding="csv"/>
  </layer>
@@ -114,7 +116,7 @@
 0,0,0,0,0,60,60,0,0,60,60,60,60,0,0,0,
 0,0,0,0,0,55,56,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,58,59,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,81,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,83,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

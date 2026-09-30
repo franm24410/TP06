@@ -1,5 +1,5 @@
 const CARTELES_TEXTOS = {
-    "C1":  "Bienvenido a nuestro juego! Esperamos lo disfrutes! \n Aqui tienes un mini tutorial: \n E para interactuar, WASD o ↑ ↓ → ← para moverse",
+    "C1":  "Bienvenido a nuestro juego! Esperamos lo disfrutes!",
     "C2":  "Empuja la piedra hacia el boton!",
     "C3":  "Las horas de la libertad son la doceava, la segunda, la sexta, la octava, la tercera, la decima, la novena y la primera",
     "C4":  "Evita las casillas marcadas para avanzar por el laberinto",
@@ -12,6 +12,11 @@ const CARTELES_TEXTOS = {
     "C11": "Este es el tutorial de juego, donde se te explican las mecánicas y controles del juego. Recuerda que puedes interactuar con los objetos, quizas te ayuden a avanzar",
     "C12": "Si pulsas la tecla enter se abrira el inventario del personaje, en el cual podras ver algunas cosas tales como el oro que tienes y los objetos que has recogido.",
     "C13": "En este juego hay combates en los cuales tu objetivo sera reducir los PV (Puntos Vitales) a 0 o, como opcion secundaria, reducirles los PV lo suficiente para poder perdonarlos. Recuerda que cada tipo de enemigo es unico, y algunos podran ser perdonados inmediatamente, mientras que otros requeriran que les reduzcas los PV para luego perdonarlos. Opcionalmente tambien puedes intentar huir del combate, pero no siempre sera posible.",
-    "C14": "En una pelea, el corazon tiene dos posibles estados, representados por dos colores: rojo y azul. El corazon rojo podra moverse libremente por el area de combate, mientras que el corazon azul se vera limitado a la gravedad. Mientras el corazon sea azul, este podra saltar para luego caer pulsando la W o la ↑.",
+    "C14": "En una pelea, el corazon tiene tres posibles estados, representados por dos colores: rojo, azul y verde. El corazon rojo podra moverse libremente por el area de combate, mientras que el corazon azul se vera limitado a la gravedad. Mientras el corazon sea azul, este podra saltar para luego caer pulsando la W o la ↑. El corazon verde, en cambio, NO PODRA moverse, y sera dado, en cambio, un escudo, el cual movera para bloquear ataques",
     "C15": "Derrotar a los enemigos usando el combate te dara oro y experiencia, mientras que perdonarlos solo te dara el oro. Tener cuanta mas experiencia consigas, mas PV tendras, a la vez que mas daño.",
+    "C16": "Hay un camino secreto mas atras, en la sala donde apareces",
+    "C17": "El cartel de arriba es el numero 9 en el codigo, pero este es el 17, esto es dado el pobre nivel de desarrollo del juego. Nosotros te avisamos cuando este el cartel 18",
+    "C18": "El puzzle si es posible, solo que muy largo (Y tedioso). Este es el cartel 18",
+    "C19": "Debia haber un cofre aca. No hubo dinero (ni tiempo)"
+
 };

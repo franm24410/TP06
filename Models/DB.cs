@@ -8,7 +8,8 @@ namespace TP06.Models
     public class DB
     {
         private string _cs =
-            @"Server=localhost;DataBase=JuegoDB;Integrated Security=True;TrustServerCertificate=True;";
+            //@"Server=localhost;DataBase=JuegoDB;Integrated Security=True;TrustServerCertificate=True;";
+            @"Server=.\SQLEXPRESS;Database=JuegoDB;Integrated Security=True;TrustServerCertificate=True;";
 
         // ---------- LOGIN / REGISTRO ----------
         public Usuario ValidarLogin(string usuario, string contrasenia)
