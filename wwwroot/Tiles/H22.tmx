@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="20" tileheight="20" infinite="1" nextlayerid="7" nextobjectid="13">
+ <editorsettings>
+  <export target="H22.tmj" format="json"/>
+ </editorsettings>
  <tileset firstgid="1" source="../../habitaciones/habitaciones/bg_ruinseasynam3.tsx"/>
  <layer id="1" name="background" width="30" height="20">
   <data encoding="csv"/>
@@ -203,13 +206,6 @@
  </objectgroup>
  <objectgroup id="6" name="Interactuable-Piso">
   <object id="8" name="39" x="-9.78125" y="-16.6563" width="20.0625" height="19.8125"/>
-  <object id="9" name="ph40" x="-19.5455" y="13.6818" width="40.5909" height="9.1364">
-   <properties>
-    <property name="direction" value="down"/>
-    <property name="targetDoor" type="int" value="37"/>
-    <property name="targetMap" value="H19"/>
-   </properties>
-  </object>
   <object id="11" name="42" x="-549.531" y="-170.406" width="20.0625" height="19.8125"/>
   <object id="12" name="PEL2" x="-437.5" y="-188.083" width="31" height="128.833"/>
  </objectgroup>
@@ -219,6 +215,13 @@
     <property name="direction" value="down"/>
     <property name="targetDoor" type="int" value="42"/>
     <property name="targetMap" value="H23"/>
+   </properties>
+  </object>
+  <object id="9" name="ph40" x="-19.5455" y="13.6818" width="40.5909" height="9.1364">
+   <properties>
+    <property name="direction" value="down"/>
+    <property name="targetDoor" type="int" value="39"/>
+    <property name="targetMap" value="H20"/>
    </properties>
   </object>
  </objectgroup>

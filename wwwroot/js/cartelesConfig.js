@@ -17,6 +17,7 @@ const CARTELES_TEXTOS = {
     "C16": "Hay un camino secreto mas atras, en la sala donde apareces",
     "C17": "El cartel de arriba es el numero 9 en el codigo, pero este es el 17, esto es dado el pobre nivel de desarrollo del juego. Nosotros te avisamos cuando este el cartel 18",
     "C18": "El puzzle si es posible, solo que muy largo (Y tedioso). Este es el cartel 18",
-    "C19": "Debia haber un cofre aca. No hubo dinero (ni tiempo)"
+    "C19": "Debia haber un cofre aca. No hubo dinero (ni tiempo)",
+    "C20": "JAJAJAJAJAJAJAJAJAJAJAJAJAJAJAJAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAJAJAJAJAJAJAJAJAJAJAJAJAJAJAJAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAJAJAJAJAJAJAJAJAJAJAJAJAJAJAJAJAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJAAJ AAJAJAJAJAJAJAJAJAJAJAJAJAJAJAJAJAJAJAAJAAJAAJAAJ AA J AA J AA J AA J AA J AA J AA J AA J AA J AA J AA J AA J AA J AA J AA J AA J AA J AA J AA J AA J AA J AA J AA J AA J AA J AA J AA J AA J_AA_J_AA_J_AA_J_AA_J_AA_J_AA_J_AA_J_AA_J_AA_J_AA_J_AA_J_AA_J_AA_J_AA_J_AA_J_AA_J_AA_J_AA_J_AA_J_AA_J_AA_J_AA_J_AA_J_AA_J_AA_J_AA_J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA-J-AA.J-A-A.J-A-A.J-A-A.J-A-A.J-A-A.J-A-A.J-A-A.J-A-A.J-A-A.J-A-A.J-A-A.J-A-A.J-A-A.J-A-A.J-A-A.J-A-A.J-A-A.J-A-A.J-A-A.J-A-A.J-A-A.J-A-A.J-A-A.J_A_A.J_A_A.J_A_A.J_A_A.J_A_A.J_A_A.J_A_A.J_A_A.J_A_A.J_A_A.J_A_A.J_A_A.J_A_A.J_A_A.J_A_A.J_A_A.J_A A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J_ A,J- Este es el cartel 18"
 
 };

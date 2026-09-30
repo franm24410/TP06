@@ -33,6 +33,14 @@ namespace TP06.Controllers
             return View();
         }
 
+        // CRÉDITOS
+        public IActionResult Credits()
+        {
+            if (!Logueado) return RedirectToAction("Index");
+            ViewBag.Nombre = HttpContext.Session.GetString("nombreUsuario");
+            return View();
+        }
+
         [HttpPost]
         public IActionResult Login(string usuario, string contrasenia)
         {

@@ -4,7 +4,7 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 let player = { x:0, y:0, width:20, height:20 };
 let camera = { x:0, y:0 };
-const speed = 5;
+const speed = 2;
 let keys = {}, grupoActivo = null;
 
 // ---------- ESTADO DE PARTIDA (se guarda en BD) ----------
