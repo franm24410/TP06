@@ -12,7 +12,8 @@ namespace TP06.Controllers
         // LOGIN / REGISTRO
         public IActionResult Index(string tab = "login")
         {
-            if (Logueado) return RedirectToAction("Juego");
+            // Al abrir el proyecto siempre se pide loguearse: se descarta la sesión anterior
+            HttpContext.Session.Clear();
             ViewBag.Tab = tab;
             return View();
         }

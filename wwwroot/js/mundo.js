@@ -231,7 +231,7 @@
     if (e.repeat) return;
     if (signAbierta || saveAbierta || isTransitioning() || typeof player === "undefined") return;
     if (k === "enter") { e.preventDefault(); e.stopPropagation(); abrirMochila(); return; }
-    if (k === "e") {
+    if (k === "e" || k === "z" || k === "x") {        // interactuar: E, Z o X
       const item = tiendaCerca(player);
       if (item) { e.preventDefault(); e.stopPropagation(); abrirTienda(item); return; }
       const boton = intCerca(player);

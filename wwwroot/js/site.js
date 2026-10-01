@@ -59,7 +59,7 @@ document.addEventListener("keydown", (e)=>{
   // [PRUEBAS] H = modo fantasma: atravesás paredes, pinchos y piedras. Borrar al terminar de testear.
   if (tecla === "h"){ window.MODO_FANTASMA = !window.MODO_FANTASMA; e.preventDefault(); return; }
 
-  if (tecla === "e"){
+  if (tecla === "e" || tecla === "z" || tecla === "x"){   // interactuar: E, Z o X
     const cartel = getSignAtPlayer(player);
     if (cartel){ abrirSign(cartel.texto); e.preventDefault(); return; }
     const gua = getGuardadoAtPlayer(player);

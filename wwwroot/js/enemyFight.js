@@ -345,7 +345,7 @@
       dialogos: ["..."], flavor: ["* 01 hace guardia."]
     },
     undyne: {
-      nombre: "Undyne", hp: 23000, atk: 12, def: 5, mercymod: -9999999999, hurtSnd: "ehurt",
+      nombre: "Undyne", hp: 11500, atk: 12, def: 5, mercymod: -9999999999, hurtSnd: "ehurt",
       check: "", acts: [], dialogos: [], flavor: ["* El viento aúlla..."]
     },
     rg02: {
@@ -1085,7 +1085,7 @@
   // Alma ROJA: lanzas que te persiguen, que suben del piso y que giran a tu
   //   alrededor (obj_spearbullet_follow, obj_risespearbullet, obj_rotspear,
   //   obj_followspear_2). Entre una y otra, Undyne cambia el color de tu alma.
-  const UX_HP = 23000;                 // vida del original
+  const UX_HP = 11500;                 // la mitad de la vida del original (23000)
   const UX_POS = { x: 210, y: 20 };
   const UX_ORIG = {                    // origen dentro de cada PNG
     "ux/hair": [14, 28], "ux/legs": [20, 10], "ux/leftarm": [33, 5], "ux/rightarm": [4, 6], "ux/torso": [39, 29],
