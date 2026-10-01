@@ -1578,8 +1578,6 @@ C:\Users\49758734\Desktop\TP06\obj\Debug\net9.0\compressed\c6mr4dx6of-5fzb5mzmpd
 C:\Users\49758734\Desktop\TP06\obj\Debug\net9.0\compressed\i67usy11jf-ld03xwwz51.gz
 C:\Users\49758734\Desktop\TP06\obj\Debug\net9.0\compressed\qvgokuhdq9-c0v9mln0n4.gz
 C:\Users\49758734\Desktop\TP06\obj\Debug\net9.0\compressed\3ubseo9tya-1dwunu19fw.gz
-C:\Users\49758734\Desktop\TP06\obj\Debug\net9.0\compressed\sxajjvqirh-bjquc1rzgs.gz
-C:\Users\49758734\Desktop\TP06\obj\Debug\net9.0\compressed\isl9bechoa-7xffvianpl.gz
 C:\Users\49758734\Desktop\TP06\obj\Debug\net9.0\compressed\ospxlz2lxa-sjtjmomj5a.gz
 C:\Users\49758734\Desktop\TP06\obj\Debug\net9.0\compressed\k7zdob11ie-hq81jqmhec.gz
 C:\Users\49758734\Desktop\TP06\obj\Debug\net9.0\compressed\50u4j4v7b2-zkqwuzgmkm.gz
@@ -1665,6 +1663,8 @@ C:\Users\49758734\AppData\Local\Temp\claude\c--Users-49758734-Desktop-TP06\66249
 C:\Users\49758734\AppData\Local\Temp\claude\c--Users-49758734-Desktop-TP06\6624961b-cfd3-450c-ba54-a0e80955eacd\scratchpad\build\TP06.runtimeconfig.json
 C:\Users\49758734\AppData\Local\Temp\claude\c--Users-49758734-Desktop-TP06\6624961b-cfd3-450c-ba54-a0e80955eacd\scratchpad\build\TP06.dll
 C:\Users\49758734\AppData\Local\Temp\claude\c--Users-49758734-Desktop-TP06\6624961b-cfd3-450c-ba54-a0e80955eacd\scratchpad\build\TP06.pdb
-C:\Users\49758734\Desktop\TP06\obj\Debug\net9.0\compressed\myogmasy63-64yxy7q3dt.gz
 C:\Users\49758734\Desktop\TP06\obj\Debug\net9.0\compressed\mryqmz297u-u0vpu5b53x.gz
 C:\Users\49758734\Desktop\TP06\obj\Debug\net9.0\compressed\ujsvi6sh5r-wvpdyltv00.gz
+C:\Users\49758734\Desktop\TP06\obj\Debug\net9.0\compressed\sxajjvqirh-3f1p0xhnns.gz
+C:\Users\49758734\Desktop\TP06\obj\Debug\net9.0\compressed\isl9bechoa-xeoq0ljxxi.gz
+C:\Users\49758734\Desktop\TP06\obj\Debug\net9.0\compressed\myogmasy63-op785kf2p0.gz
