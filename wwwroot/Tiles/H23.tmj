@@ -4,7 +4,7 @@
  "layers":[
         {
          "chunks":[],
-         "height":16,
+         "height":0,
          "id":1,
          "name":"background",
          "opacity":1,
@@ -12,7 +12,7 @@
          "starty":0,
          "type":"tilelayer",
          "visible":true,
-         "width":16,
+         "width":0,
          "x":0,
          "y":0
         }, 
@@ -151,7 +151,7 @@
                     0, 0, 0, 0, 0, 60, 60, 0, 0, 60, 60, 60, 60, 0, 0, 0,
                     0, 0, 0, 0, 0, 55, 56, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 58, 59, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 83, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 112, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -564,6 +564,18 @@
                  "width":20,
                  "x":1300,
                  "y":110.75
+                }, 
+                {
+                 "height":7.81818181818181,
+                 "id":22,
+                 "name":"",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":12.3636363636364,
+                 "x":104.909090909091,
+                 "y":172.181818181818
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -697,7 +709,7 @@
          "y":0
         }],
  "nextlayerid":10,
- "nextobjectid":21,
+ "nextobjectid":23,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",
@@ -720,8 +732,8 @@
          "source":"rsz_1chatgpt_image_29_sept_2026_07_49_46_pm.tsx"
         }, 
         {
-         "firstgid":83,
-         "source":"spr_savepoint_0.tsx"
+         "firstgid":82,
+         "source":"bg_tundratiles.tsx"
         }],
  "tilewidth":20,
  "type":"map",
